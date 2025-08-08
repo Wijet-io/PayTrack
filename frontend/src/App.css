@@ -1,7 +1,19 @@
-/* Custom styles for Payment Tracker */
+/* Custom styles for PayTrack */
 .App {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
     'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+/* Hide "Made with Emergent" badge */
+[alt*="Made with Emergent"],
+[text*="Made with Emergent"],
+*:contains("Made with Emergent") {
+  display: none !important;
+}
+
+/* Hide any watermark or branding */
+div[style*="position: fixed"][style*="bottom"][style*="right"] {
+  display: none !important;
 }
 
 /* Custom scrollbar */
