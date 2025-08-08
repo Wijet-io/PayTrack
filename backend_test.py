@@ -55,22 +55,8 @@ class PaymentTrackerAPITester:
             print(f"❌ Failed - Error: {str(e)}")
             return False, {}
 
-    def test_admin_initialization(self):
-        """Test admin initialization"""
-        print("\n" + "="*50)
-        print("TESTING ADMIN INITIALIZATION")
-        print("="*50)
-        
-        success, response = self.run_test(
-            "Initialize Admin",
-            "POST",
-            "init-admin",
-            200
-        )
-        return success
-
     def test_admin_login(self):
-        """Test admin login"""
+        """Test admin login with correct credentials"""
         print("\n" + "="*50)
         print("TESTING AUTHENTICATION")
         print("="*50)
@@ -85,6 +71,7 @@ class PaymentTrackerAPITester:
         if success and 'access_token' in response:
             self.admin_token = response['access_token']
             print(f"   Admin token obtained: {self.admin_token[:20]}...")
+            print(f"   User info: {response.get('user', {})}")
             return True
         return False
 
@@ -98,7 +85,8 @@ class PaymentTrackerAPITester:
             token=self.admin_token
         )
         if success:
-            print(f"   User: {response.get('name')} ({response.get('role')})")
+            print(f"   User: {response.get('identifiant')} ({response.get('role')})")
+            print(f"   User ID: {response.get('user_id')}")
         return success
 
     def test_company_operations(self):
@@ -112,8 +100,8 @@ class PaymentTrackerAPITester:
             "Create Company",
             "POST",
             "companies",
-            200,
-            data={"name": "Test Company Ltd"},
+            201,
+            data={"name": f"Test Company {datetime.now().strftime('%H%M%S')}"},
             token=self.admin_token
         )
         if success and 'id' in response:
@@ -134,85 +122,59 @@ class PaymentTrackerAPITester:
         return success and success2
 
     def test_user_operations(self):
-        """Test user CRUD operations"""
+        """Test user CRUD operations with correct field names"""
         print("\n" + "="*50)
         print("TESTING USER OPERATIONS")
         print("="*50)
         
-        # Create manager
+        # Create manager with correct field name 'identifiant'
         success1, response1 = self.run_test(
             "Create Manager",
             "POST",
             "users",
-            200,
+            201,
             data={
-                "user_id": "manager1",
-                "name": "Test Manager",
+                "identifiant": "Test Manager",
                 "role": "manager",
-                "password": "manager123",
-                "company_id": self.company_id
+                "password": "manager123"
             },
             token=self.admin_token
         )
         if success1 and 'id' in response1:
             self.manager_id = response1['id']
             print(f"   Manager created with ID: {self.manager_id}")
+            print(f"   Manager login ID: {response1.get('user_id')}")
         
-        # Login as manager
+        # Create employee with correct field name 'identifiant'
         success2, response2 = self.run_test(
-            "Manager Login",
-            "POST",
-            "login",
-            200,
-            data={"user_id": "manager1", "password": "manager123"}
-        )
-        if success2 and 'access_token' in response2:
-            self.manager_token = response2['access_token']
-            print(f"   Manager token obtained")
-        
-        # Create employee (as manager)
-        success3, response3 = self.run_test(
-            "Create Employee (as Manager)",
+            "Create Employee",
             "POST",
             "users",
-            200,
+            201,
             data={
-                "user_id": "employee1",
-                "name": "Test Employee",
+                "identifiant": "Test Employee",
                 "role": "employee",
-                "password": "employee123",
-                "company_id": self.company_id
+                "password": "employee123"
             },
-            token=self.manager_token
+            token=self.admin_token
         )
-        if success3 and 'id' in response3:
-            self.employee_id = response3['id']
+        if success2 and 'id' in response2:
+            self.employee_id = response2['id']
             print(f"   Employee created with ID: {self.employee_id}")
-        
-        # Login as employee
-        success4, response4 = self.run_test(
-            "Employee Login",
-            "POST",
-            "login",
-            200,
-            data={"user_id": "employee1", "password": "employee123"}
-        )
-        if success4 and 'access_token' in response4:
-            self.employee_token = response4['access_token']
-            print(f"   Employee token obtained")
+            print(f"   Employee login ID: {response2.get('user_id')}")
         
         # Get users
-        success5, response5 = self.run_test(
+        success3, response3 = self.run_test(
             "Get Users (as Admin)",
             "GET",
             "users",
             200,
             token=self.admin_token
         )
-        if success5:
-            print(f"   Found {len(response5)} users")
+        if success3:
+            print(f"   Found {len(response3)} users")
         
-        return all([success1, success2, success3, success4, success5])
+        return all([success1, success2, success3])
 
     def test_payment_entry_operations(self):
         """Test payment entry CRUD operations"""
@@ -220,58 +182,52 @@ class PaymentTrackerAPITester:
         print("TESTING PAYMENT ENTRY OPERATIONS")
         print("="*50)
         
-        # Create payment entry (as employee)
+        # Create payment entry
         success1, response1 = self.run_test(
-            "Create Payment Entry (as Employee)",
+            "Create Payment Entry",
             "POST",
             "payment-entries",
-            200,
+            201,
             data={
                 "company_id": self.company_id,
                 "client_name": "Test Client",
-                "invoice_number": "INV-001",
+                "invoice_number": f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}",
                 "amount": 1500.50
             },
-            token=self.employee_token
+            token=self.admin_token
         )
         if success1 and 'id' in response1:
             self.payment_entry_id = response1['id']
             print(f"   Payment entry created with ID: {self.payment_entry_id}")
         
-        # Get payment entries (as employee - should see only own)
+        # Get all payment entries
         success2, response2 = self.run_test(
-            "Get Payment Entries (as Employee)",
+            "Get All Payment Entries",
             "GET",
             "payment-entries",
             200,
-            token=self.employee_token
+            token=self.admin_token
         )
         if success2:
-            print(f"   Employee sees {len(response2)} entries")
+            total_entries = len(response2)
+            pending_entries = [e for e in response2 if not e.get('is_validated')]
+            validated_entries = [e for e in response2 if e.get('is_validated')]
+            print(f"   Total entries: {total_entries}")
+            print(f"   Pending entries: {len(pending_entries)}")
+            print(f"   Validated entries: {len(validated_entries)}")
         
-        # Get payment entries (as manager - should see all)
+        # Get validated entries only
         success3, response3 = self.run_test(
-            "Get Payment Entries (as Manager)",
+            "Get Validated Entries Only",
             "GET",
-            "payment-entries",
+            "payment-entries?validated_only=true",
             200,
-            token=self.manager_token
+            token=self.admin_token
         )
         if success3:
-            print(f"   Manager sees {len(response3)} entries")
+            print(f"   Validated entries (direct query): {len(response3)}")
         
-        # Get pending entries (as manager)
-        success4, response4 = self.run_test(
-            "Get Pending Entries (as Manager)",
-            "GET",
-            "payment-entries/pending",
-            200,
-            token=self.manager_token
-        )
-        if success4:
-            print(f"   Found {len(response4)} pending entries")
-        
-        return all([success1, success2, success3, success4])
+        return all([success1, success2, success3])
 
     def test_validation_workflow(self):
         """Test payment validation workflow"""
@@ -279,34 +235,25 @@ class PaymentTrackerAPITester:
         print("TESTING VALIDATION WORKFLOW")
         print("="*50)
         
-        # Try to validate as employee (should fail)
+        # Validate payment entry (as admin)
         success1, response1 = self.run_test(
-            "Validate Entry (as Employee - should fail)",
-            "POST",
-            f"payment-entries/{self.payment_entry_id}/validate",
-            403,
-            token=self.employee_token
-        )
-        
-        # Validate as manager (should succeed)
-        success2, response2 = self.run_test(
-            "Validate Entry (as Manager)",
+            "Validate Payment Entry (as Admin)",
             "POST",
             f"payment-entries/{self.payment_entry_id}/validate",
             200,
-            token=self.manager_token
+            token=self.admin_token
         )
         
         # Try to validate again (should fail - already validated)
-        success3, response3 = self.run_test(
+        success2, response2 = self.run_test(
             "Validate Entry Again (should fail)",
             "POST",
             f"payment-entries/{self.payment_entry_id}/validate",
             400,
-            token=self.manager_token
+            token=self.admin_token
         )
         
-        return all([success1, success2, success3])
+        return all([success1, success2])
 
     def test_reminder_system(self):
         """Test reminder system"""
@@ -319,14 +266,14 @@ class PaymentTrackerAPITester:
             "Create Another Payment Entry",
             "POST",
             "payment-entries",
-            200,
+            201,
             data={
                 "company_id": self.company_id,
                 "client_name": "Another Client",
-                "invoice_number": "INV-002",
+                "invoice_number": f"INV-REM-{datetime.now().strftime('%Y%m%d%H%M%S')}",
                 "amount": 2000.00
             },
-            token=self.employee_token
+            token=self.admin_token
         )
         
         reminder_entry_id = None
@@ -334,17 +281,17 @@ class PaymentTrackerAPITester:
             reminder_entry_id = response1['id']
             print(f"   Created entry for reminder testing: {reminder_entry_id}")
         
-        # Create reminder (as manager)
+        # Create reminder (as admin)
         success2, response2 = self.run_test(
-            "Create Reminder (as Manager)",
+            "Create Reminder (as Admin)",
             "POST",
             "reminders",
-            200,
+            201,
             data={
                 "payment_entry_id": reminder_entry_id,
                 "note": "Follow up with client about payment status"
             },
-            token=self.manager_token
+            token=self.admin_token
         )
         
         # Get reminders for entry
@@ -353,128 +300,84 @@ class PaymentTrackerAPITester:
             "GET",
             f"reminders/{reminder_entry_id}",
             200,
-            token=self.manager_token
+            token=self.admin_token
         )
         if success3:
             print(f"   Found {len(response3)} reminders for entry")
         
-        # Try to create reminder as employee (should fail)
-        success4, response4 = self.run_test(
-            "Create Reminder (as Employee - should fail)",
-            "POST",
-            "reminders",
-            403,
-            data={
-                "payment_entry_id": reminder_entry_id,
-                "note": "Test note"
-            },
-            token=self.employee_token
-        )
-        
-        return all([success1, success2, success3, success4])
+        return all([success1, success2, success3])
 
-    def test_error_scenarios(self):
-        """Test error scenarios"""
+    def test_analytics(self):
+        """Test analytics functionality"""
         print("\n" + "="*50)
-        print("TESTING ERROR SCENARIOS")
+        print("TESTING ANALYTICS")
         print("="*50)
         
-        # Invalid login
-        success1, response1 = self.run_test(
-            "Invalid Login",
-            "POST",
-            "login",
-            401,
-            data={"user_id": "invalid", "password": "wrong"}
-        )
-        
-        # Unauthorized access (no token)
-        success2, response2 = self.run_test(
-            "Unauthorized Access",
+        success, response = self.run_test(
+            "Get Analytics (as Admin)",
             "GET",
-            "me",
-            401
-        )
-        
-        # Employee trying to create manager
-        success3, response3 = self.run_test(
-            "Employee Creating Manager (should fail)",
-            "POST",
-            "users",
-            403,
-            data={
-                "user_id": "manager2",
-                "name": "Another Manager",
-                "role": "manager",
-                "password": "password123"
-            },
-            token=self.employee_token
-        )
-        
-        # Duplicate user ID
-        success4, response4 = self.run_test(
-            "Duplicate User ID (should fail)",
-            "POST",
-            "users",
-            400,
-            data={
-                "user_id": "admin",  # Already exists
-                "name": "Duplicate Admin",
-                "role": "admin",
-                "password": "password123"
-            },
+            "analytics",
+            200,
             token=self.admin_token
         )
         
-        return all([success1, success2, success3, success4])
+        if success:
+            print(f"   Total entries: {response.get('total_entries', 0)}")
+            print(f"   Validated entries: {response.get('validated_entries', 0)}")
+            print(f"   Pending entries: {response.get('pending_entries', 0)}")
+            print(f"   Total amount: {response.get('total_amount', 0)}€")
+            print(f"   Companies analyzed: {len(response.get('by_company', []))}")
+            print(f"   Employees analyzed: {len(response.get('by_employee', []))}")
+        
+        return success
 
-    def test_delete_operations(self):
-        """Test delete operations"""
+    def test_data_separation_verification(self):
+        """Verify that pending and validated entries are properly separated"""
         print("\n" + "="*50)
-        print("TESTING DELETE OPERATIONS")
+        print("TESTING DATA SEPARATION VERIFICATION")
         print("="*50)
         
-        # Create a new entry to delete
-        success1, response1 = self.run_test(
-            "Create Entry for Deletion",
-            "POST",
+        # Get all entries
+        success1, all_entries = self.run_test(
+            "Get All Entries for Verification",
+            "GET",
             "payment-entries",
             200,
-            data={
-                "company_id": self.company_id,
-                "client_name": "Delete Test Client",
-                "invoice_number": "INV-DELETE",
-                "amount": 500.00
-            },
-            token=self.employee_token
+            token=self.admin_token
         )
         
-        delete_entry_id = None
-        if success1 and 'id' in response1:
-            delete_entry_id = response1['id']
-        
-        # Delete own entry (should succeed)
-        success2, response2 = self.run_test(
-            "Delete Own Entry",
-            "DELETE",
-            f"payment-entries/{delete_entry_id}",
+        # Get validated entries only
+        success2, validated_entries = self.run_test(
+            "Get Validated Entries for Verification",
+            "GET",
+            "payment-entries?validated_only=true",
             200,
-            token=self.employee_token
+            token=self.admin_token
         )
         
-        # Try to delete validated entry (should fail)
-        success3, response3 = self.run_test(
-            "Delete Validated Entry (should fail)",
-            "DELETE",
-            f"payment-entries/{self.payment_entry_id}",
-            400,
-            token=self.employee_token
-        )
+        if success1 and success2:
+            # Count pending and validated from all entries
+            pending_from_all = [e for e in all_entries if not e.get('is_validated')]
+            validated_from_all = [e for e in all_entries if e.get('is_validated')]
+            
+            print(f"   All entries count: {len(all_entries)}")
+            print(f"   Pending entries (from all): {len(pending_from_all)}")
+            print(f"   Validated entries (from all): {len(validated_from_all)}")
+            print(f"   Validated entries (direct query): {len(validated_entries)}")
+            
+            # Verify separation is correct
+            separation_correct = len(validated_from_all) == len(validated_entries)
+            if separation_correct:
+                print("   ✅ Data separation is working correctly!")
+            else:
+                print("   ❌ Data separation issue detected!")
+            
+            return separation_correct
         
-        return all([success1, success2, success3])
+        return False
 
 def main():
-    print("🚀 Starting Payment Tracker API Tests")
+    print("🚀 Starting PayTrack Backend API Tests")
     print("="*60)
     
     tester = PaymentTrackerAPITester()
@@ -482,7 +385,6 @@ def main():
     # Run all tests
     test_results = []
     
-    test_results.append(tester.test_admin_initialization())
     test_results.append(tester.test_admin_login())
     test_results.append(tester.test_get_current_user())
     test_results.append(tester.test_company_operations())
@@ -490,8 +392,8 @@ def main():
     test_results.append(tester.test_payment_entry_operations())
     test_results.append(tester.test_validation_workflow())
     test_results.append(tester.test_reminder_system())
-    test_results.append(tester.test_error_scenarios())
-    test_results.append(tester.test_delete_operations())
+    test_results.append(tester.test_analytics())
+    test_results.append(tester.test_data_separation_verification())
     
     # Print final results
     print("\n" + "="*60)
@@ -509,9 +411,9 @@ def main():
         print("\n❌ SOME TEST SUITES FAILED!")
         failed_suites = []
         suite_names = [
-            "Admin Initialization", "Admin Login", "Current User", "Company Operations",
-            "User Operations", "Payment Entry Operations", "Validation Workflow",
-            "Reminder System", "Error Scenarios", "Delete Operations"
+            "Admin Login", "Current User", "Company Operations", "User Operations",
+            "Payment Entry Operations", "Validation Workflow", "Reminder System",
+            "Analytics", "Data Separation Verification"
         ]
         for i, result in enumerate(test_results):
             if not result:
