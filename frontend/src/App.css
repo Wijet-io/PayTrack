@@ -244,31 +244,26 @@ button:focus {
   }
 }
 
-/* Fix for gradient text visibility issues */
-.bg-gradient-to-r {
-  background: linear-gradient(to right, #2563eb, #7c3aed) !important;
-  -webkit-background-clip: text !important;
-  background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  color: transparent !important;
+/* Fix for gradient text visibility issues - Override Tailwind's text-transparent */
+.text-transparent {
+  color: #2563eb !important;
+  -webkit-text-fill-color: #2563eb !important;
 }
 
-/* Fallback for gradient text - ensure it's visible */
-h1[class*="bg-gradient"], 
-*[class*="bg-gradient-to-r"] {
-  background: linear-gradient(to right, #2563eb, #7c3aed) !important;
+/* Ensure gradient text is visible */
+.bg-clip-text {
   -webkit-background-clip: text !important;
   background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  /* Fallback color in case gradient fails */
   color: #2563eb !important;
+  -webkit-text-fill-color: #2563eb !important;
 }
 
-/* Ensure PayTrack title is always visible */
-h1:contains("PayTrack"),
-*:contains("PayTrack") {
+/* Specific fix for PayTrack title */
+h1.text-transparent,
+.bg-gradient-to-r.bg-clip-text.text-transparent {
   color: #2563eb !important;
-  font-weight: bold !important;
+  -webkit-text-fill-color: #2563eb !important;
+  background: none !important;
 }
 
 /* Final catch-all for any watermarks */
