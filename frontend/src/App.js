@@ -456,13 +456,13 @@ function PendingEntriesTab({ user }) {
                             <CheckCircle className="h-4 w-4 mr-1" />
                             Valider
                           </Button>
-                          <ReminderDialog
+                          <RelanceDialog
                             entryId={entry.id}
-                            onSubmit={(note) => handleReminder(entry.id, note)}
+                            onSubmit={(note) => handleRelance(entry.id, note)}
                             trigger={
                               <Button variant="outline" size="sm">
                                 <Bell className="h-4 w-4 mr-1" />
-                                Rappel
+                                Relance
                               </Button>
                             }
                           />
