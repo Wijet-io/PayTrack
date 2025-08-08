@@ -324,6 +324,9 @@ function LoginPage({ onLogin }) {
     setLoading(true);
     setError('');
 
+    console.log('Login attempt with:', credentials);
+    console.log('API URL:', API);
+
     try {
       const response = await fetch(`${API}/login`, {
         method: 'POST',
@@ -331,14 +334,19 @@ function LoginPage({ onLogin }) {
         body: JSON.stringify(credentials),
       });
 
+      console.log('Login response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('Login successful, user data:', data.user);
         localStorage.setItem('token', data.access_token);
         onLogin(data.user);
       } else {
+        console.log('Login failed with status:', response.status);
         setError('Identifiants invalides');
       }
     } catch (error) {
+      console.error('Login error:', error);
       setError('Erreur de connexion');
     } finally {
       setLoading(false);
