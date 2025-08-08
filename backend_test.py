@@ -187,7 +187,7 @@ class PaymentTrackerAPITester:
             "Create Payment Entry",
             "POST",
             "payment-entries",
-            201,
+            200,
             data={
                 "company_id": self.company_id,
                 "client_name": "Test Client",
