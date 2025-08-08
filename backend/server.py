@@ -272,13 +272,20 @@ async def get_users(current_user: User = Depends(get_current_user)):
         query = {"role": "employee"}
     
     users = await db.users.find(query).to_list(1000)
-    return [UserResponse(
-        id=user["id"],
-        user_id=user["user_id"],
-        identifiant=user["identifiant"],
-        role=user["role"],
-        created_at=user["created_at"]
-    ) for user in users]
+    result = []
+    for user in users:
+        # Handle migration for old users without identifiant field
+        identifiant = user.get("identifiant", user.get("name", user.get("user_id", "Unknown")))
+        
+        result.append(UserResponse(
+            id=user["id"],
+            user_id=user["user_id"],
+            identifiant=identifiant,
+            role=user["role"],
+            created_at=user["created_at"]
+        ))
+    
+    return result
 
 @api_router.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(user_id: str, user_update: UserUpdate, current_user: User = Depends(get_current_user)):
