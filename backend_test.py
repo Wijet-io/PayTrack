@@ -182,6 +182,11 @@ class PaymentTrackerAPITester:
         print("TESTING PAYMENT ENTRY OPERATIONS")
         print("="*50)
         
+        # Ensure we have a company_id
+        if not self.company_id:
+            print("   No company_id available, skipping payment entry tests")
+            return False
+        
         # Create payment entry
         success1, response1 = self.run_test(
             "Create Payment Entry",
