@@ -490,7 +490,6 @@ async def get_reminders_for_entry(payment_entry_id: str, current_user: User = De
     
     return result
 
-# Analytics route
 @api_router.get("/analytics", response_model=AnalyticsData)
 async def get_analytics(current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
@@ -507,15 +506,18 @@ async def get_analytics(current_user: User = Depends(get_current_user)):
     validated_amount = sum(e["amount"] for e in all_entries if e["is_validated"])
     pending_amount = total_amount - validated_amount
     
-    # Get company data for grouping
+    # Get company data for grouping with fallback handling
     companies = await db.companies.find().to_list(1000)
     company_map = {c["id"]: c["name"] for c in companies}
     
-    # Get user data for grouping
+    # Get user data for grouping with fallback handling
     users = await db.users.find().to_list(1000)
-    user_map = {u["id"]: u["identifiant"] for u in users}
+    user_map = {}
+    for u in users:
+        identifiant = u.get("identifiant", u.get("name", u.get("user_id", "Utilisateur inconnu")))
+        user_map[u["id"]] = identifiant
     
-    # Group by company
+    # Group by company with safe access
     by_company = {}
     for entry in all_entries:
         company_name = company_map.get(entry["company_id"], "Entreprise inconnue")
@@ -526,7 +528,7 @@ async def get_analytics(current_user: User = Depends(get_current_user)):
         if entry["is_validated"]:
             by_company[company_name]["validated"] += 1
     
-    # Group by employee
+    # Group by employee with safe access
     by_employee = {}
     for entry in all_entries:
         employee_name = user_map.get(entry["created_by"], "Employé inconnu")
@@ -537,16 +539,33 @@ async def get_analytics(current_user: User = Depends(get_current_user)):
         if entry["is_validated"]:
             by_employee[employee_name]["validated"] += 1
     
-    # Group by month
+    # Group by month with safe date handling
     by_month = {}
     for entry in all_entries:
-        month_key = entry["created_at"].strftime("%Y-%m")
-        if month_key not in by_month:
-            by_month[month_key] = {"count": 0, "amount": 0, "validated": 0}
-        by_month[month_key]["count"] += 1
-        by_month[month_key]["amount"] += entry["amount"]
-        if entry["is_validated"]:
-            by_month[month_key]["validated"] += 1
+        try:
+            if isinstance(entry["created_at"], str):
+                # Handle string dates
+                from datetime import datetime
+                created_date = datetime.fromisoformat(entry["created_at"].replace('Z', '+00:00'))
+            else:
+                created_date = entry["created_at"]
+            
+            month_key = created_date.strftime("%Y-%m")
+            if month_key not in by_month:
+                by_month[month_key] = {"count": 0, "amount": 0, "validated": 0}
+            by_month[month_key]["count"] += 1
+            by_month[month_key]["amount"] += entry["amount"]
+            if entry["is_validated"]:
+                by_month[month_key]["validated"] += 1
+        except Exception:
+            # Fallback for problematic dates
+            month_key = "Date inconnue"
+            if month_key not in by_month:
+                by_month[month_key] = {"count": 0, "amount": 0, "validated": 0}
+            by_month[month_key]["count"] += 1
+            by_month[month_key]["amount"] += entry["amount"]
+            if entry["is_validated"]:
+                by_month[month_key]["validated"] += 1
     
     # Convert to lists for response
     by_company_list = [{"name": k, **v} for k, v in by_company.items()]
