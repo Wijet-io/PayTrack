@@ -1,15 +1,286 @@
 import React, { useState, useEffect } from 'react';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+// Custom Confirmation Modal
+function ConfirmModal({ isOpen, onClose, onConfirm, title, message, type = 'danger' }) {
+  if (!isOpen) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 50
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '0.5rem',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        maxWidth: '28rem',
+        width: '100%',
+        margin: '1rem'
+      }}>
+        <div style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{
+              width: '3rem',
+              height: '3rem',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: type === 'danger' ? '#fef2f2' : type === 'success' ? '#f0f9ff' : '#f3f4f6'
+            }}>
+              <span style={{
+                fontSize: '1.5rem',
+                color: type === 'danger' ? '#dc2626' : type === 'success' ? '#0369a1' : '#6b7280'
+              }}>
+                {type === 'danger' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️'}
+              </span>
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827' }}>{title}</h3>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>{message}</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <button
+              onClick={onClose}
+              style={{
+                padding: '0.5rem 1rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.375rem',
+                backgroundColor: 'white',
+                color: '#374151',
+                cursor: 'pointer'
+              }}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={onConfirm}
+              style={{
+                padding: '0.5rem 1rem',
+                border: 'none',
+                borderRadius: '0.375rem',
+                backgroundColor: type === 'danger' ? '#dc2626' : type === 'success' ? '#059669' : '#3b82f6',
+                color: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              Confirmer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Relance Dialog with History
+function RelanceDialog({ entryId, onSubmit, trigger, onClose }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [note, setNote] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [relances, setRelances] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchRelances();
+    }
+  }, [isOpen, entryId]);
+
+  const fetchRelances = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API}/reminders/${entryId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRelances(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch relances:', error);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setConfirmModal({
+      isOpen: true,
+      title: 'Enregistrer la relance',
+      message: note ? 'Êtes-vous sûr de vouloir enregistrer cette relance avec la note ?' : 'Êtes-vous sûr de vouloir enregistrer cette relance ?',
+      type: 'success'
+    });
+  };
+
+  const confirmRelance = async () => {
+    setLoading(true);
+    setConfirmModal({ isOpen: false });
+
+    try {
+      await onSubmit(note);
+      setNote('');
+      fetchRelances();
+    } catch (error) {
+      console.error('Failed to send relance:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) {
+    return React.cloneElement(trigger, { onClick: () => setIsOpen(true) });
+  }
+
+  return (
+    <>
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 40
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '0.5rem',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          maxWidth: '32rem',
+          width: '100%',
+          margin: '1rem'
+        }}>
+          <div style={{ padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>Relances de suivi</h3>
+              <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+            </div>
+            
+            <div style={{ marginBottom: '1rem' }}>
+              <h4 style={{ fontWeight: '500', marginBottom: '0.5rem' }}>Relances précédentes:</h4>
+              {relances.length > 0 ? (
+                <div style={{ maxHeight: '12rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {relances.map((relance) => (
+                    <div key={relance.id} style={{
+                      backgroundColor: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      borderRadius: '0.5rem',
+                      padding: '0.75rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#1e40af' }}>
+                            {relance.triggered_by_name}
+                          </div>
+                          {relance.note && (
+                            <div style={{ fontSize: '0.875rem', color: '#1e3a8a', marginTop: '0.25rem' }}>
+                              {relance.note}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#3730a3' }}>
+                          {new Date(relance.triggered_at).toLocaleDateString('fr-FR')}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Aucune relance précédente</div>
+              )}
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Nouvelle relance (optionnel)</label>
+                <textarea
+                  placeholder="Ex: Client contacté, en attente de confirmation bancaire..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#059669',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    opacity: loading ? 0.7 : 1
+                  }}
+                >
+                  {loading ? 'Enregistrement...' : 'Enregistrer la relance'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false })}
+        onConfirm={confirmRelance}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
+    </>
+  );
+}
+
 function App() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchCurrentUser(token);
+    } else {
       setLoading(false);
-    }, 1000);
+    }
   }, []);
+
+  const fetchCurrentUser = async (token) => {
+    try {
+      const response = await fetch(`${API}/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        localStorage.removeItem('token');
+      }
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
+      localStorage.removeItem('token');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -19,7 +290,7 @@ function App() {
         alignItems: 'center', 
         justifyContent: 'center',
         background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-        fontFamily: 'Arial, sans-serif'
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
       }}>
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ 
@@ -42,7 +313,7 @@ function App() {
     return <LoginPage onLogin={setUser} />;
   }
 
-  return <Dashboard user={user} onLogout={() => setUser(null)} />;
+  return <Dashboard user={user} onLogout={() => { setUser(null); localStorage.removeItem('token'); }} />;
 }
 
 function LoginPage({ onLogin }) {
