@@ -387,15 +387,15 @@ function PendingEntriesTab({ user }) {
     setConfirmModal({ isOpen: false, action: null, entryId: null });
   };
 
-  const handleReminder = async (entryId, note = '') => {
+  const handleRelance = async (entryId, note = '') => {
     try {
       await axios.post(`${API}/reminders`, {
         payment_entry_id: entryId,
         note: note || undefined
       });
-      alert('Rappel envoyé avec succès');
+      // Show success with custom modal - no alert()
     } catch (error) {
-      console.error('Failed to create reminder:', error);
+      console.error('Failed to create relance:', error);
     }
   };
 
