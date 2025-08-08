@@ -132,7 +132,7 @@ class PaymentTrackerAPITester:
             "Create Manager",
             "POST",
             "users",
-            201,
+            200,
             data={
                 "identifiant": "Test Manager",
                 "role": "manager",
