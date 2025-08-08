@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
-import { Button } from './components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
-import { Input } from './components/ui/input';
-import { Label } from './components/ui/label';
-import { Badge } from './components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table';
-import { Textarea } from './components/ui/textarea';
-import { Alert, AlertDescription } from './components/ui/alert';
+import { Button } from './components/ui/button.jsx';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card.jsx';
+import { Input } from './components/ui/input.jsx';
+import { Label } from './components/ui/label.jsx';
+import { Badge } from './components/ui/badge.jsx';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select.jsx';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs.jsx';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog.jsx';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table.jsx';
+import { Textarea } from './components/ui/textarea.jsx';
+import { Alert, AlertDescription } from './components/ui/alert.jsx';
 import { 
   LogIn, 
   LogOut, 
