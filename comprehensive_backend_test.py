@@ -98,7 +98,7 @@ class ComprehensivePayTrackAPITester:
             "Get Current User without token (should fail)",
             "GET",
             "me",
-            401
+            403  # FastAPI returns 403 for missing auth, not 401
         )
         
         return all([success1, success2, success3, success4])
