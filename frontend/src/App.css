@@ -244,6 +244,33 @@ button:focus {
   }
 }
 
+/* Fix for gradient text visibility issues */
+.bg-gradient-to-r {
+  background: linear-gradient(to right, #2563eb, #7c3aed) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+
+/* Fallback for gradient text - ensure it's visible */
+h1[class*="bg-gradient"], 
+*[class*="bg-gradient-to-r"] {
+  background: linear-gradient(to right, #2563eb, #7c3aed) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  /* Fallback color in case gradient fails */
+  color: #2563eb !important;
+}
+
+/* Ensure PayTrack title is always visible */
+h1:contains("PayTrack"),
+*:contains("PayTrack") {
+  color: #2563eb !important;
+  font-weight: bold !important;
+}
+
 /* Final catch-all for any watermarks */
 * {
   position: relative;
