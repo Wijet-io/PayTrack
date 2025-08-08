@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
-import App from "./App-simple";
+import App from "./App-visible";
 
 console.log("Starting React app...");
 
