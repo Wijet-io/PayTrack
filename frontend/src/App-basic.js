@@ -7,12 +7,14 @@ function App() {
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
-      backgroundColor: '#f0f8ff',
-      color: '#000',
-      fontSize: '24px',
-      fontFamily: 'Arial'
+      backgroundColor: '#1e3a8a', // Strong blue background
+      color: '#ffffff', // White text
+      fontSize: '32px',
+      fontFamily: 'Arial, sans-serif',
+      fontWeight: 'bold',
+      textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
     }
-  }, 'PayTrack - React is Working!');
+  }, 'PayTrack - React is Working! 🎉');
 }
 
 export default App;
