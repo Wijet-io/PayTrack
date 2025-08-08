@@ -464,11 +464,11 @@ async def delete_payment_entry(entry_id: str, current_user: User = Depends(get_c
     await db.payment_entries.delete_one({"id": entry_id})
     return {"message": "Entrée supprimée avec succès"}
 
-# Reminder routes
+# Relance routes
 @api_router.post("/reminders", response_model=Reminder)
-async def create_reminder(reminder: ReminderCreate, current_user: User = Depends(get_current_user)):
+async def create_relance(reminder: ReminderCreate, current_user: User = Depends(get_current_user)):
     if current_user.role not in ["manager", "admin"]:
-        raise HTTPException(status_code=403, detail="Seuls les managers et admins peuvent créer des rappels")
+        raise HTTPException(status_code=403, detail="Seuls les managers et admins peuvent créer des relances")
     
     # Check if payment entry exists and is not validated
     entry = await db.payment_entries.find_one({"id": reminder.payment_entry_id})
@@ -476,7 +476,7 @@ async def create_reminder(reminder: ReminderCreate, current_user: User = Depends
         raise HTTPException(status_code=404, detail="Entrée de paiement non trouvée")
     
     if entry["is_validated"]:
-        raise HTTPException(status_code=400, detail="Impossible de créer un rappel pour une entrée validée")
+        raise HTTPException(status_code=400, detail="Impossible de créer une relance pour une entrée validée")
     
     reminder_obj = Reminder(
         payment_entry_id=reminder.payment_entry_id,
@@ -487,9 +487,9 @@ async def create_reminder(reminder: ReminderCreate, current_user: User = Depends
     return reminder_obj
 
 @api_router.get("/reminders/{payment_entry_id}", response_model=List[ReminderResponse])
-async def get_reminders_for_entry(payment_entry_id: str, current_user: User = Depends(get_current_user)):
+async def get_relances_for_entry(payment_entry_id: str, current_user: User = Depends(get_current_user)):
     if current_user.role not in ["manager", "admin"]:
-        raise HTTPException(status_code=403, detail="Seuls les managers et admins peuvent voir les rappels")
+        raise HTTPException(status_code=403, detail="Seuls les managers et admins peuvent voir les relances")
     
     reminders = await db.reminders.find({"payment_entry_id": payment_entry_id}).to_list(1000)
     
