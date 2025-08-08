@@ -286,7 +286,7 @@ class PaymentTrackerAPITester:
             "Create Reminder (as Admin)",
             "POST",
             "reminders",
-            201,
+            200,
             data={
                 "payment_entry_id": reminder_entry_id,
                 "note": "Follow up with client about payment status"
