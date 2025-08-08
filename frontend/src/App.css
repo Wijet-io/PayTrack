@@ -4,7 +4,7 @@
     'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
 }
 
-/* Hide "Made with Emergent" badge and any watermarks */
+/* Aggressively hide "Made with Emergent" badge and any watermarks */
 [alt*="Made with Emergent"],
 [text*="Made with Emergent"],
 *:contains("Made with Emergent"),
@@ -17,13 +17,28 @@ div[style*="position: fixed"][style*="bottom"][style*="right"],
   opacity: 0 !important;
 }
 
-/* Hide any fixed positioned elements in bottom right corner */
-body *[style*="position: fixed"] {
+/* Hide any fixed positioned elements */
+*[style*="position: fixed"] {
   display: none !important;
 }
 
-/* Specific targeting for Emergent badge */
-body > div:last-child {
+/* Target specific elements that might contain the badge */
+div[style*="bottom: 16px"],
+div[style*="right: 16px"],
+*[style*="z-index: 999999"],
+*[style*="z-index: 9999"] {
+  display: none !important;
+}
+
+/* Hide last child div that might be the badge container */
+body > div:last-of-type {
+  display: none !important;
+}
+
+/* Additional aggressive hiding */
+[class*="emergent"],
+[id*="emergent"],
+*[data-testid*="emergent"] {
   display: none !important;
 }
 
@@ -198,14 +213,6 @@ button:focus {
   }
 }
 
-/* Dark mode support (if needed later) */
-@media (prefers-color-scheme: dark) {
-  .dark-mode {
-    background-color: #0f172a;
-    color: #f8fafc;
-  }
-}
-
 /* Animation utilities */
 .fade-in {
   animation: fadeIn 0.5s ease-in-out;
@@ -237,11 +244,11 @@ button:focus {
   }
 }
 
-/* Ensure all fixed elements are hidden */
+/* Final catch-all for any watermarks */
 * {
-  z-index: auto !important;
+  position: relative;
 }
 
-*[style*="position: fixed"][style*="bottom: 16px"][style*="right: 16px"] {
-  display: none !important;
+*:after, *:before {
+  content: none !important;
 }
