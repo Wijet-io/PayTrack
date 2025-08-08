@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 
 class PaymentTrackerAPITester:
-    def __init__(self, base_url="https://cfa933a6-2168-4ef6-83d7-d6900b025b6e.preview.emergentagent.com"):
+    def __init__(self, base_url="https://4d43934b-f685-469c-b2ab-2f2225e17c27.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.admin_token = None
