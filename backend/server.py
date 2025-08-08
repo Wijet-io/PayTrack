@@ -350,17 +350,21 @@ async def get_payment_entries(validated_only: bool = False, current_user: User =
     for entry in entries:
         # Get company name
         company = await db.companies.find_one({"id": entry["company_id"]})
-        company_name = company["name"] if company else None
+        company_name = company["name"] if company else "Entreprise inconnue"
         
-        # Get creator name
+        # Get creator name with fallback handling
         creator = await db.users.find_one({"id": entry["created_by"]})
-        created_by_name = creator["identifiant"] if creator else None
+        if creator:
+            created_by_name = creator.get("identifiant", creator.get("name", creator.get("user_id", "Utilisateur inconnu")))
+        else:
+            created_by_name = "Utilisateur inconnu"
         
-        # Get validator name if validated
+        # Get validator name if validated with fallback handling
         validated_by_name = None
         if entry.get("validated_by"):
             validator = await db.users.find_one({"id": entry["validated_by"]})
-            validated_by_name = validator["identifiant"] if validator else None
+            if validator:
+                validated_by_name = validator.get("identifiant", validator.get("name", validator.get("user_id", "Validateur inconnu")))
         
         result.append(PaymentEntryResponse(
             id=entry["id"],
