@@ -49,10 +49,10 @@ function ConfirmModal({ isOpen, onClose, onConfirm, title, message, type = 'dang
         <div className="p-6">
           <div className="flex items-center gap-4 mb-4">
             <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              type === 'danger' ? 'bg-red-100' : 'bg-blue-100'
+              type === 'danger' ? 'bg-red-100' : type === 'success' ? 'bg-green-100' : 'bg-blue-100'
             }`}>
               <AlertTriangle className={`h-6 w-6 ${
-                type === 'danger' ? 'text-red-600' : 'text-blue-600'
+                type === 'danger' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-blue-600'
               }`} />
             </div>
             <div>
@@ -66,7 +66,7 @@ function ConfirmModal({ isOpen, onClose, onConfirm, title, message, type = 'dang
             </Button>
             <Button 
               onClick={onConfirm}
-              className={type === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}
+              className={type === 'danger' ? 'bg-red-600 hover:bg-red-700' : type === 'success' ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}
             >
               Confirmer
             </Button>
