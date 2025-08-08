@@ -70,24 +70,39 @@ function LoginPage({ onLogin }) {
     setLoading(true);
     setError('');
 
+    console.log('🔍 LOGIN DEBUG: Starting login process');
+    console.log('🔍 LOGIN DEBUG: Credentials:', credentials);
+    console.log('🔍 LOGIN DEBUG: API URL:', API);
+
     try {
+      console.log('🔍 LOGIN DEBUG: Making fetch request...');
       const response = await fetch(`${API}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
       });
 
+      console.log('🔍 LOGIN DEBUG: Response status:', response.status);
+      console.log('🔍 LOGIN DEBUG: Response ok:', response.ok);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 LOGIN DEBUG: Login successful!', data.user);
         localStorage.setItem('token', data.access_token);
+        console.log('🔍 LOGIN DEBUG: Token stored, calling onLogin...');
         onLogin(data.user);
       } else {
+        console.log('🔍 LOGIN DEBUG: Login failed with status:', response.status);
+        const errorText = await response.text();
+        console.log('🔍 LOGIN DEBUG: Error response:', errorText);
         setError('Identifiants invalides');
       }
     } catch (error) {
+      console.error('🔍 LOGIN DEBUG: Exception during login:', error);
       setError('Erreur de connexion');
     } finally {
       setLoading(false);
+      console.log('🔍 LOGIN DEBUG: Login process finished');
     }
   };
 
