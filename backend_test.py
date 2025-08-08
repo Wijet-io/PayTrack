@@ -266,6 +266,11 @@ class PaymentTrackerAPITester:
         print("TESTING REMINDER SYSTEM")
         print("="*50)
         
+        # Ensure we have a company_id
+        if not self.company_id:
+            print("   No company_id available, skipping reminder tests")
+            return False
+        
         # Create another payment entry for reminder testing
         success1, response1 = self.run_test(
             "Create Another Payment Entry",
