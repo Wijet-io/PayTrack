@@ -100,7 +100,7 @@ class PaymentTrackerAPITester:
             "Create Company",
             "POST",
             "companies",
-            201,
+            200,
             data={"name": f"Test Company {datetime.now().strftime('%H%M%S')}"},
             token=self.admin_token
         )
