@@ -598,20 +598,20 @@ function LoginPage({ onLogin }) {
 function Dashboard({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('pending-entries');
   const [entries, setEntries] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
   useEffect(() => {
-    fetchEntries();
+    Promise.all([fetchEntries(), fetchCompanies(), fetchUsers()]);
   }, []);
 
   const fetchEntries = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/payment-entries`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const response = await fetch(`${API}/payment-entries`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       if (response.ok) {
         const data = await response.json();
         setEntries(data);
@@ -621,11 +621,115 @@ function Dashboard({ user, onLogout }) {
     }
   };
 
+  const fetchCompanies = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API}/companies`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch companies:', error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API}/users`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
+  };
+
+  const handleDelete = (entryId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'delete',
+      entryId: entryId,
+      title: 'Supprimer l\'entrée',
+      message: 'Êtes-vous sûr de vouloir supprimer cette entrée de paiement ?',
+      type: 'danger'
+    });
+  };
+
+  const handleValidate = (entryId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'validate',
+      entryId: entryId,
+      title: 'Valider l\'entrée',
+      message: 'Êtes-vous sûr de vouloir valider cette entrée de paiement ?',
+      type: 'success'
+    });
+  };
+
+  const confirmAction = async () => {
+    const { action, entryId } = confirmModal;
+    const token = localStorage.getItem('token');
+    
+    try {
+      if (action === 'delete') {
+        await fetch(`${API}/payment-entries/${entryId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } else if (action === 'validate') {
+        await fetch(`${API}/payment-entries/${entryId}/validate`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      }
+      fetchEntries();
+    } catch (error) {
+      console.error('Failed to perform action:', error);
+    }
+    
+    setConfirmModal({ isOpen: false });
+  };
+
+  const handleRelance = async (entryId, note = '') => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API}/reminders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          payment_entry_id: entryId,
+          note: note || undefined
+        })
+      });
+    } catch (error) {
+      console.error('Failed to create relance:', error);
+    }
+  };
+
   const pendingEntries = entries.filter(e => !e.is_validated);
   const validatedEntries = entries.filter(e => e.is_validated);
 
+  const getRoleLabel = (role) => {
+    switch(role) {
+      case 'admin': return 'Administrateur';
+      case 'manager': return 'Manager';  
+      case 'employee': return 'Employé';
+      default: return role;
+    }
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif' }}>
       {/* Header */}
       <header style={{
         backgroundColor: 'white',
@@ -648,10 +752,9 @@ function Dashboard({ user, onLogout }) {
               backgroundColor: '#f3f4f6', 
               padding: '0.25rem 0.75rem', 
               borderRadius: '9999px', 
-              fontSize: '0.875rem',
-              textTransform: 'capitalize'
+              fontSize: '0.875rem'
             }}>
-              {user.role === 'admin' ? 'Administrateur' : user.role === 'manager' ? 'Manager' : 'Employé'}
+              {getRoleLabel(user.role)}
             </span>
             <span style={{ fontWeight: '500' }}>{user.identifiant}</span>
             <button 
@@ -685,7 +788,7 @@ function Dashboard({ user, onLogout }) {
 
         {/* Tabs */}
         <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
             <button
               onClick={() => setActiveTab('pending-entries')}
               style={{
@@ -694,10 +797,11 @@ function Dashboard({ user, onLogout }) {
                 border: 'none',
                 backgroundColor: activeTab === 'pending-entries' ? '#2563eb' : '#f3f4f6',
                 color: activeTab === 'pending-entries' ? 'white' : '#374151',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontWeight: '500'
               }}
             >
-              Entrées en attente ({pendingEntries.length})
+              Entrées en attente
             </button>
             <button
               onClick={() => setActiveTab('validated-entries')}
@@ -707,14 +811,47 @@ function Dashboard({ user, onLogout }) {
                 border: 'none',
                 backgroundColor: activeTab === 'validated-entries' ? '#2563eb' : '#f3f4f6',
                 color: activeTab === 'validated-entries' ? 'white' : '#374151',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontWeight: '500'
               }}
             >
-              Entrées validées ({validatedEntries.length})
+              Entrées validées
             </button>
+            {(user.role === 'admin' || user.role === 'manager') && (
+              <button
+                onClick={() => setActiveTab('users')}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  backgroundColor: activeTab === 'users' ? '#2563eb' : '#f3f4f6',
+                  color: activeTab === 'users' ? 'white' : '#374151',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+              >
+                Utilisateurs
+              </button>
+            )}
+            {(user.role === 'admin' || user.role === 'manager') && (
+              <button
+                onClick={() => setActiveTab('companies')}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '0.5rem',
+                  border: 'none',
+                  backgroundColor: activeTab === 'companies' ? '#2563eb' : '#f3f4f6',
+                  color: activeTab === 'companies' ? 'white' : '#374151',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+              >
+                Entreprises
+              </button>
+            )}
           </div>
 
-          {/* Content */}
+          {/* Tab Content */}
           {activeTab === 'pending-entries' && (
             <div style={{
               backgroundColor: 'white',
@@ -739,6 +876,7 @@ function Dashboard({ user, onLogout }) {
                         <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>N° Facture</th>
                         <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Montant</th>
                         <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Créé par</th>
+                        <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -749,6 +887,59 @@ function Dashboard({ user, onLogout }) {
                           <td style={{ padding: '0.75rem' }}>{entry.invoice_number}</td>
                           <td style={{ padding: '0.75rem' }}>{entry.amount.toLocaleString()} €</td>
                           <td style={{ padding: '0.75rem' }}>{entry.created_by_name}</td>
+                          <td style={{ padding: '0.75rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <button
+                                onClick={() => handleDelete(entry.id)}
+                                style={{
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.875rem',
+                                  border: '1px solid #dc2626',
+                                  borderRadius: '0.25rem',
+                                  backgroundColor: 'white',
+                                  color: '#dc2626',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Supprimer
+                              </button>
+                              {(user.role === 'manager' || user.role === 'admin') && (
+                                <>
+                                  <button
+                                    onClick={() => handleValidate(entry.id)}
+                                    style={{
+                                      padding: '0.25rem 0.5rem',
+                                      fontSize: '0.875rem',
+                                      border: 'none',
+                                      borderRadius: '0.25rem',
+                                      backgroundColor: '#059669',
+                                      color: 'white',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    Valider
+                                  </button>
+                                  <RelanceDialog
+                                    entryId={entry.id}
+                                    onSubmit={(note) => handleRelance(entry.id, note)}
+                                    trigger={
+                                      <button style={{
+                                        padding: '0.25rem 0.5rem',
+                                        fontSize: '0.875rem',
+                                        border: '1px solid #3b82f6',
+                                        borderRadius: '0.25rem',
+                                        backgroundColor: 'white',
+                                        color: '#3b82f6',
+                                        cursor: 'pointer'
+                                      }}>
+                                        Relance
+                                      </button>
+                                    }
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -782,6 +973,7 @@ function Dashboard({ user, onLogout }) {
                         <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>N° Facture</th>
                         <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Montant</th>
                         <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Validé par</th>
+                        <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Validé le</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -792,6 +984,9 @@ function Dashboard({ user, onLogout }) {
                           <td style={{ padding: '0.75rem' }}>{entry.invoice_number}</td>
                           <td style={{ padding: '0.75rem' }}>{entry.amount.toLocaleString()} €</td>
                           <td style={{ padding: '0.75rem' }}>{entry.validated_by_name}</td>
+                          <td style={{ padding: '0.75rem' }}>
+                            {new Date(entry.validated_at).toLocaleDateString('fr-FR')}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -800,8 +995,96 @@ function Dashboard({ user, onLogout }) {
               )}
             </div>
           )}
+
+          {activeTab === 'users' && (user.role === 'admin' || user.role === 'manager') && (
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '0.75rem',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+            }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
+                Gestion des utilisateurs
+              </h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f9fafb' }}>
+                      <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Identifiant</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Nom d'affichage</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Rôle</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Créé le</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '0.75rem', fontWeight: '500' }}>{u.user_id}</td>
+                        <td style={{ padding: '0.75rem' }}>{u.identifiant}</td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span style={{
+                            backgroundColor: '#f3f4f6',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '0.25rem',
+                            fontSize: '0.875rem'
+                          }}>
+                            {getRoleLabel(u.role)}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem', color: '#6b7280' }}>
+                          {new Date(u.created_at).toLocaleDateString('fr-FR')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'companies' && (user.role === 'admin' || user.role === 'manager') && (
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '0.75rem',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+            }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
+                Gestion des entreprises
+              </h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f9fafb' }}>
+                      <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Nom de l'entreprise</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Créée le</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {companies.map((company) => (
+                      <tr key={company.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '0.75rem', fontWeight: '500' }}>{company.name}</td>
+                        <td style={{ padding: '0.75rem', color: '#6b7280' }}>
+                          {new Date(company.created_at).toLocaleDateString('fr-FR')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false })}
+        onConfirm={confirmAction}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
     </div>
   );
 }
