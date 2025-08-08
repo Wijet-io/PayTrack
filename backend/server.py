@@ -184,6 +184,14 @@ async def login(user_login: UserLogin):
     if not user_doc or not verify_password(user_login.password, user_doc["password_hash"]):
         raise HTTPException(status_code=401, detail="Identifiants invalides")
     
+    # Handle migration for old users without identifiant field
+    if "identifiant" not in user_doc:
+        user_doc["identifiant"] = user_doc.get("name", user_doc["user_id"])
+        await db.users.update_one(
+            {"user_id": user_login.user_id},
+            {"$set": {"identifiant": user_doc["identifiant"]}}
+        )
+    
     user = User(**user_doc)
     access_token = create_access_token(data={"sub": user.id})
     
