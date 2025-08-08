@@ -368,9 +368,7 @@ function LoginPage({ onLogin }) {
           <h1 style={{ 
             fontSize: '2.5rem', 
             fontWeight: 'bold', 
-            background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: '#2563eb', // Solid blue color
             marginBottom: '0.5rem'
           }}>
             PayTrack
