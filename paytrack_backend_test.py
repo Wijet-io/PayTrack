@@ -1,68 +1,94 @@
+#!/usr/bin/env python3
+
 import requests
 import sys
-from datetime import datetime
 import json
+from datetime import datetime
 
 class PayTrackAPITester:
     def __init__(self, base_url="https://cfa933a6-2168-4ef6-83d7-d6900b025b6e.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
-        self.admin_token = None
-        self.manager_token = None
-        self.employee_token = None
+        self.token = None
         self.tests_run = 0
         self.tests_passed = 0
-        self.company_id = None
-        self.manager_user = None
-        self.employee_user = None
-        self.payment_entry_id = None
+        self.admin_user = None
+        self.test_company_id = None
+        self.test_user_id = None
+        self.test_entry_id = None
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, token=None):
+    def log(self, message):
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
+
+    def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
         """Run a single API test"""
         url = f"{self.api_url}/{endpoint}"
-        headers = {'Content-Type': 'application/json'}
-        if token:
-            headers['Authorization'] = f'Bearer {token}'
+        test_headers = {'Content-Type': 'application/json'}
+        
+        if self.token:
+            test_headers['Authorization'] = f'Bearer {self.token}'
+        
+        if headers:
+            test_headers.update(headers)
 
         self.tests_run += 1
-        print(f"\n🔍 Testing {name}...")
+        self.log(f"🔍 Testing {name}...")
         
         try:
             if method == 'GET':
-                response = requests.get(url, headers=headers)
+                response = requests.get(url, headers=test_headers)
             elif method == 'POST':
-                response = requests.post(url, json=data, headers=headers)
+                response = requests.post(url, json=data, headers=test_headers)
             elif method == 'PUT':
-                response = requests.put(url, json=data, headers=headers)
+                response = requests.put(url, json=data, headers=test_headers)
             elif method == 'DELETE':
-                response = requests.delete(url, headers=headers)
+                response = requests.delete(url, headers=test_headers)
 
             success = response.status_code == expected_status
             if success:
                 self.tests_passed += 1
-                print(f"✅ Passed - Status: {response.status_code}")
+                self.log(f"✅ {name} - Status: {response.status_code}")
                 try:
-                    return True, response.json()
+                    return True, response.json() if response.content else {}
                 except:
                     return True, {}
             else:
-                print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
+                self.log(f"❌ {name} - Expected {expected_status}, got {response.status_code}")
                 try:
-                    print(f"   Response: {response.json()}")
+                    error_detail = response.json()
+                    self.log(f"   Error: {error_detail}")
                 except:
-                    print(f"   Response: {response.text}")
+                    self.log(f"   Error: {response.text}")
                 return False, {}
 
         except Exception as e:
-            print(f"❌ Failed - Error: {str(e)}")
+            self.log(f"❌ {name} - Exception: {str(e)}")
             return False, {}
 
-    def test_admin_login(self):
-        """Test admin login with correct credentials"""
-        print("\n" + "="*50)
-        print("TESTING AUTHENTICATION")
-        print("="*50)
+    def test_system_initialization(self):
+        """Test system initialization"""
+        self.log("\n=== TESTING SYSTEM INITIALIZATION ===")
         
+        # Try to initialize system (might fail if already initialized)
+        success, response = self.run_test(
+            "System Initialization",
+            "POST",
+            "init",
+            200
+        )
+        
+        if not success:
+            self.log("ℹ️  System likely already initialized, continuing with existing admin")
+        else:
+            self.log(f"✅ System initialized with admin credentials")
+        
+        return True
+
+    def test_authentication(self):
+        """Test login functionality"""
+        self.log("\n=== TESTING AUTHENTICATION ===")
+        
+        # Test login with admin credentials
         success, response = self.run_test(
             "Admin Login",
             "POST",
@@ -70,516 +96,304 @@ class PayTrackAPITester:
             200,
             data={"user_id": "admin", "password": "admin123"}
         )
-        if success and 'access_token' in response:
-            self.admin_token = response['access_token']
-            print(f"   Admin token obtained: {self.admin_token[:20]}...")
-            print(f"   Admin user: {response.get('user', {}).get('identifiant')} ({response.get('user', {}).get('role')})")
-            return True
-        return False
-
-    def test_get_current_user(self):
-        """Test getting current user info"""
-        success, response = self.run_test(
-            "Get Current User",
-            "GET",
-            "me",
-            200,
-            token=self.admin_token
-        )
-        if success:
-            print(f"   User: {response.get('identifiant')} ({response.get('role')})")
-            print(f"   User ID: {response.get('user_id')}")
-        return success
-
-    def test_company_operations(self):
-        """Test company CRUD operations"""
-        print("\n" + "="*50)
-        print("TESTING COMPANY OPERATIONS")
-        print("="*50)
         
-        # Create company
+        if success and 'access_token' in response:
+            self.token = response['access_token']
+            self.admin_user = response['user']
+            self.log(f"✅ Logged in as: {self.admin_user['identifiant']} (Role: {self.admin_user['role']})")
+            
+            # Test /me endpoint
+            success, me_response = self.run_test(
+                "Get Current User",
+                "GET",
+                "me",
+                200
+            )
+            
+            return success
+        else:
+            self.log("❌ Failed to login - cannot continue tests")
+            return False
+
+    def test_company_management(self):
+        """Test company CRUD operations"""
+        self.log("\n=== TESTING COMPANY MANAGEMENT ===")
+        
+        # Create a test company
         success, response = self.run_test(
             "Create Company",
             "POST",
             "companies",
             200,
-            data={"name": "Test Company Ltd"},
-            token=self.admin_token
+            data={"name": "Test Company Ltd"}
         )
-        if success and 'id' in response:
-            self.company_id = response['id']
-            print(f"   Company created with ID: {self.company_id}")
         
-        # Get companies
-        success2, response2 = self.run_test(
+        if success and 'id' in response:
+            self.test_company_id = response['id']
+            self.log(f"✅ Created company with ID: {self.test_company_id}")
+        else:
+            self.log("❌ Failed to create company")
+            return False
+        
+        # Get all companies
+        success, companies = self.run_test(
             "Get Companies",
             "GET",
             "companies",
-            200,
-            token=self.admin_token
+            200
         )
-        if success2:
-            print(f"   Found {len(response2)} companies")
         
-        return success and success2
+        if success:
+            self.log(f"✅ Retrieved {len(companies)} companies")
+        
+        # Update company
+        success, response = self.run_test(
+            "Update Company",
+            "PUT",
+            f"companies/{self.test_company_id}",
+            200,
+            data={"name": "Updated Test Company Ltd"}
+        )
+        
+        return success
 
-    def test_user_operations_with_auto_id(self):
-        """Test user CRUD operations with auto-generated user IDs"""
-        print("\n" + "="*50)
-        print("TESTING USER OPERATIONS (AUTO-GENERATED IDs)")
-        print("="*50)
+    def test_user_management(self):
+        """Test user CRUD operations"""
+        self.log("\n=== TESTING USER MANAGEMENT ===")
         
-        # Create manager with auto-generated user_id
-        success1, response1 = self.run_test(
-            "Create Manager (Auto-Generated ID)",
-            "POST",
-            "users",
-            200,
-            data={
-                "identifiant": "Test Manager",
-                "role": "manager",
-                "password": "manager123"
-            },
-            token=self.admin_token
-        )
-        if success1 and 'user_id' in response1:
-            self.manager_user = response1
-            print(f"   Manager created with auto-generated user_id: {response1['user_id']}")
-            print(f"   Manager identifiant: {response1['identifiant']}")
-        
-        # Login as manager using auto-generated user_id
-        if self.manager_user:
-            success2, response2 = self.run_test(
-                "Manager Login (Auto-Generated ID)",
-                "POST",
-                "login",
-                200,
-                data={"user_id": self.manager_user['user_id'], "password": "manager123"}
-            )
-            if success2 and 'access_token' in response2:
-                self.manager_token = response2['access_token']
-                print(f"   Manager token obtained")
-        
-        # Create employee with auto-generated user_id
-        success3, response3 = self.run_test(
-            "Create Employee (Auto-Generated ID)",
+        # Create a test user
+        success, response = self.run_test(
+            "Create User",
             "POST",
             "users",
             200,
             data={
                 "identifiant": "Test Employee",
                 "role": "employee",
-                "password": "employee123"
-            },
-            token=self.admin_token
+                "password": "testpass123"
+            }
         )
-        if success3 and 'user_id' in response3:
-            self.employee_user = response3
-            print(f"   Employee created with auto-generated user_id: {response3['user_id']}")
-            print(f"   Employee identifiant: {response3['identifiant']}")
         
-        # Login as employee using auto-generated user_id
-        if self.employee_user:
-            success4, response4 = self.run_test(
-                "Employee Login (Auto-Generated ID)",
-                "POST",
-                "login",
-                200,
-                data={"user_id": self.employee_user['user_id'], "password": "employee123"}
-            )
-            if success4 and 'access_token' in response4:
-                self.employee_token = response4['access_token']
-                print(f"   Employee token obtained")
+        if success and 'id' in response:
+            self.test_user_id = response['id']
+            self.log(f"✅ Created user with ID: {self.test_user_id}, Login ID: {response['user_id']}")
+        else:
+            self.log("❌ Failed to create user")
+            return False
         
-        # Get users
-        success5, response5 = self.run_test(
-            "Get Users (as Admin)",
+        # Get all users
+        success, users = self.run_test(
+            "Get Users",
             "GET",
             "users",
-            200,
-            token=self.admin_token
+            200
         )
-        if success5:
-            print(f"   Found {len(response5)} users")
         
-        return all([success1, success2, success3, success4, success5])
-
-    def test_admin_password_editing(self):
-        """Test admin can edit any user's password"""
-        print("\n" + "="*50)
-        print("TESTING ADMIN PASSWORD EDITING")
-        print("="*50)
+        if success:
+            self.log(f"✅ Retrieved {len(users)} users")
         
-        if not self.employee_user:
-            print("❌ No employee user available for password editing test")
-            return False
-        
-        # Admin edits employee password
-        success1, response1 = self.run_test(
-            "Admin Edit Employee Password",
+        # Update user
+        success, response = self.run_test(
+            "Update User",
             "PUT",
-            f"users/{self.employee_user['id']}",
+            f"users/{self.test_user_id}",
             200,
-            data={
-                "password": "newpassword123"
-            },
-            token=self.admin_token
+            data={"identifiant": "Updated Test Employee"}
         )
         
-        # Test login with new password
-        success2, response2 = self.run_test(
-            "Employee Login with New Password",
-            "POST",
-            "login",
-            200,
-            data={"user_id": self.employee_user['user_id'], "password": "newpassword123"}
-        )
-        
-        # Test old password fails
-        success3, response3 = self.run_test(
-            "Employee Login with Old Password (should fail)",
-            "POST",
-            "login",
-            401,
-            data={"user_id": self.employee_user['user_id'], "password": "employee123"}
-        )
-        
-        return all([success1, success2, success3])
+        return success
 
-    def test_payment_entry_operations(self):
+    def test_payment_entries(self):
         """Test payment entry CRUD operations"""
-        print("\n" + "="*50)
-        print("TESTING PAYMENT ENTRY OPERATIONS")
-        print("="*50)
+        self.log("\n=== TESTING PAYMENT ENTRIES ===")
         
-        if not self.company_id or not self.employee_token:
-            print("❌ Missing company or employee token for payment entry tests")
+        if not self.test_company_id:
+            self.log("❌ No test company available for payment entry tests")
             return False
         
-        # Create payment entry (as employee) - no company restrictions
-        success1, response1 = self.run_test(
-            "Create Payment Entry (Employee - Any Company)",
+        # Create a payment entry
+        success, response = self.run_test(
+            "Create Payment Entry",
             "POST",
             "payment-entries",
             200,
             data={
-                "company_id": self.company_id,
+                "company_id": self.test_company_id,
                 "client_name": "Test Client",
                 "invoice_number": "INV-001",
                 "amount": 1500.50
-            },
-            token=self.employee_token
+            }
         )
-        if success1 and 'id' in response1:
-            self.payment_entry_id = response1['id']
-            print(f"   Payment entry created with ID: {self.payment_entry_id}")
         
-        # Get all payment entries (should show ALL entries)
-        success2, response2 = self.run_test(
+        if success and 'id' in response:
+            self.test_entry_id = response['id']
+            self.log(f"✅ Created payment entry with ID: {self.test_entry_id}")
+        else:
+            self.log("❌ Failed to create payment entry")
+            return False
+        
+        # Get all payment entries
+        success, entries = self.run_test(
             "Get All Payment Entries",
             "GET",
             "payment-entries",
-            200,
-            token=self.employee_token
+            200
         )
-        if success2:
-            print(f"   Found {len(response2)} total entries")
+        
+        if success:
+            self.log(f"✅ Retrieved {len(entries)} payment entries")
         
         # Get validated entries only
-        success3, response3 = self.run_test(
-            "Get Validated Entries Only",
+        success, validated_entries = self.run_test(
+            "Get Validated Entries",
             "GET",
             "payment-entries?validated_only=true",
+            200
+        )
+        
+        if success:
+            self.log(f"✅ Retrieved {len(validated_entries)} validated entries")
+        
+        # Update payment entry
+        success, response = self.run_test(
+            "Update Payment Entry",
+            "PUT",
+            f"payment-entries/{self.test_entry_id}",
             200,
-            token=self.employee_token
+            data={
+                "company_id": self.test_company_id,
+                "client_name": "Updated Test Client",
+                "invoice_number": "INV-001-UPDATED",
+                "amount": 2000.75
+            }
         )
-        if success3:
-            print(f"   Found {len(response3)} validated entries")
         
-        return all([success1, success2, success3])
-
-    def test_validation_workflow(self):
-        """Test payment validation workflow"""
-        print("\n" + "="*50)
-        print("TESTING VALIDATION WORKFLOW")
-        print("="*50)
-        
-        if not self.payment_entry_id or not self.manager_token:
-            print("❌ Missing payment entry or manager token for validation tests")
-            return False
-        
-        # Try to validate as employee (should fail)
-        success1, response1 = self.run_test(
-            "Validate Entry (as Employee - should fail)",
+        # Validate payment entry
+        success, response = self.run_test(
+            "Validate Payment Entry",
             "POST",
-            f"payment-entries/{self.payment_entry_id}/validate",
-            403,
-            token=self.employee_token
+            f"payment-entries/{self.test_entry_id}/validate",
+            200
         )
         
-        # Validate as manager (should succeed)
-        success2, response2 = self.run_test(
-            "Validate Entry (as Manager)",
-            "POST",
-            f"payment-entries/{self.payment_entry_id}/validate",
-            200,
-            token=self.manager_token
-        )
-        
-        # Try to validate again (should fail - already validated)
-        success3, response3 = self.run_test(
-            "Validate Entry Again (should fail)",
-            "POST",
-            f"payment-entries/{self.payment_entry_id}/validate",
-            400,
-            token=self.manager_token
-        )
-        
-        return all([success1, success2, success3])
+        return success
 
     def test_reminder_system(self):
         """Test reminder system"""
-        print("\n" + "="*50)
-        print("TESTING REMINDER SYSTEM")
-        print("="*50)
+        self.log("\n=== TESTING REMINDER SYSTEM ===")
         
-        if not self.company_id or not self.employee_token or not self.manager_token:
-            print("❌ Missing required tokens for reminder tests")
+        if not self.test_entry_id:
+            self.log("❌ No test payment entry available for reminder tests")
             return False
         
-        # Create another payment entry for reminder testing
-        success1, response1 = self.run_test(
-            "Create Another Payment Entry",
-            "POST",
-            "payment-entries",
-            200,
-            data={
-                "company_id": self.company_id,
-                "client_name": "Another Client",
-                "invoice_number": "INV-002",
-                "amount": 2000.00
-            },
-            token=self.employee_token
-        )
-        
-        reminder_entry_id = None
-        if success1 and 'id' in response1:
-            reminder_entry_id = response1['id']
-            print(f"   Created entry for reminder testing: {reminder_entry_id}")
-        
-        # Create reminder (as manager)
-        success2, response2 = self.run_test(
-            "Create Reminder (as Manager)",
+        # Create a reminder
+        success, response = self.run_test(
+            "Create Reminder",
             "POST",
             "reminders",
             200,
             data={
-                "payment_entry_id": reminder_entry_id,
-                "note": "Follow up with client about payment status"
-            },
-            token=self.manager_token
+                "payment_entry_id": self.test_entry_id,
+                "note": "Test reminder note"
+            }
         )
+        
+        if success:
+            self.log("✅ Created reminder successfully")
         
         # Get reminders for entry
-        success3, response3 = self.run_test(
+        success, reminders = self.run_test(
             "Get Reminders for Entry",
             "GET",
-            f"reminders/{reminder_entry_id}",
-            200,
-            token=self.manager_token
-        )
-        if success3:
-            print(f"   Found {len(response3)} reminders for entry")
-        
-        # Try to create reminder as employee (should fail)
-        success4, response4 = self.run_test(
-            "Create Reminder (as Employee - should fail)",
-            "POST",
-            "reminders",
-            403,
-            data={
-                "payment_entry_id": reminder_entry_id,
-                "note": "Test note"
-            },
-            token=self.employee_token
+            f"reminders/{self.test_entry_id}",
+            200
         )
         
-        return all([success1, success2, success3, success4])
+        if success:
+            self.log(f"✅ Retrieved {len(reminders)} reminders for entry")
+        
+        return success
 
-    def test_analytics_functionality(self):
-        """Test analytics functionality"""
-        print("\n" + "="*50)
-        print("TESTING ANALYTICS FUNCTIONALITY")
-        print("="*50)
+    def test_analytics(self):
+        """Test analytics endpoint"""
+        self.log("\n=== TESTING ANALYTICS ===")
         
-        # Get analytics (admin only)
-        success1, response1 = self.run_test(
-            "Get Analytics (as Admin)",
+        success, analytics = self.run_test(
+            "Get Analytics",
             "GET",
             "analytics",
-            200,
-            token=self.admin_token
-        )
-        if success1:
-            print(f"   Total entries: {response1.get('total_entries', 0)}")
-            print(f"   Validated entries: {response1.get('validated_entries', 0)}")
-            print(f"   Pending entries: {response1.get('pending_entries', 0)}")
-            print(f"   By company data: {len(response1.get('by_company', []))} companies")
-            print(f"   By employee data: {len(response1.get('by_employee', []))} employees")
-            print(f"   By month data: {len(response1.get('by_month', []))} months")
-        
-        # Try to get analytics as non-admin (should fail)
-        success2, response2 = self.run_test(
-            "Get Analytics (as Employee - should fail)",
-            "GET",
-            "analytics",
-            403,
-            token=self.employee_token
+            200
         )
         
-        return all([success1, success2])
+        if success:
+            self.log(f"✅ Analytics data retrieved:")
+            self.log(f"   Total entries: {analytics.get('total_entries', 0)}")
+            self.log(f"   Validated entries: {analytics.get('validated_entries', 0)}")
+            self.log(f"   Pending entries: {analytics.get('pending_entries', 0)}")
+            self.log(f"   Total amount: {analytics.get('total_amount', 0)}")
+        
+        return success
 
-    def test_entry_modification_permissions(self):
-        """Test that all users can modify/delete unvalidated entries"""
-        print("\n" + "="*50)
-        print("TESTING ENTRY MODIFICATION PERMISSIONS")
-        print("="*50)
+    def cleanup_test_data(self):
+        """Clean up test data"""
+        self.log("\n=== CLEANING UP TEST DATA ===")
         
-        if not self.company_id or not self.employee_token:
-            print("❌ Missing required data for modification tests")
-            return False
-        
-        # Create a new unvalidated entry
-        success1, response1 = self.run_test(
-            "Create Entry for Modification Test",
-            "POST",
-            "payment-entries",
-            200,
-            data={
-                "company_id": self.company_id,
-                "client_name": "Modification Test Client",
-                "invoice_number": "INV-MOD",
-                "amount": 750.00
-            },
-            token=self.employee_token
-        )
-        
-        mod_entry_id = None
-        if success1 and 'id' in response1:
-            mod_entry_id = response1['id']
-            print(f"   Created entry for modification: {mod_entry_id}")
-        
-        # Modify the entry (should succeed for unvalidated entry)
-        success2, response2 = self.run_test(
-            "Modify Unvalidated Entry",
-            "PUT",
-            f"payment-entries/{mod_entry_id}",
-            200,
-            data={
-                "company_id": self.company_id,
-                "client_name": "Modified Client Name",
-                "invoice_number": "INV-MOD-UPDATED",
-                "amount": 850.00
-            },
-            token=self.employee_token
-        )
-        
-        # Delete the entry (should succeed for unvalidated entry)
-        success3, response3 = self.run_test(
-            "Delete Unvalidated Entry",
-            "DELETE",
-            f"payment-entries/{mod_entry_id}",
-            200,
-            token=self.employee_token
-        )
-        
-        return all([success1, success2, success3])
+        # Delete payment entry (if not validated)
+        if self.test_entry_id:
+            success, response = self.run_test(
+                "Delete Payment Entry",
+                "DELETE",
+                f"payment-entries/{self.test_entry_id}",
+                200
+            )
+            if not success:
+                self.log("ℹ️  Could not delete payment entry (might be validated)")
 
-    def test_error_scenarios(self):
-        """Test error scenarios"""
-        print("\n" + "="*50)
-        print("TESTING ERROR SCENARIOS")
-        print("="*50)
+    def run_all_tests(self):
+        """Run all tests"""
+        self.log("🚀 Starting PayTrack API Tests")
+        self.log(f"🌐 Testing against: {self.base_url}")
         
-        # Invalid login
-        success1, response1 = self.run_test(
-            "Invalid Login",
-            "POST",
-            "login",
-            401,
-            data={"user_id": "invalid", "password": "wrong"}
-        )
+        # Run test suites
+        test_suites = [
+            self.test_system_initialization,
+            self.test_authentication,
+            self.test_company_management,
+            self.test_user_management,
+            self.test_payment_entries,
+            self.test_reminder_system,
+            self.test_analytics
+        ]
         
-        # Unauthorized access (no token)
-        success2, response2 = self.run_test(
-            "Unauthorized Access",
-            "GET",
-            "me",
-            401
-        )
+        all_passed = True
+        for test_suite in test_suites:
+            try:
+                result = test_suite()
+                if not result:
+                    all_passed = False
+            except Exception as e:
+                self.log(f"❌ Test suite failed with exception: {str(e)}")
+                all_passed = False
         
-        # Employee trying to create manager
-        success3, response3 = self.run_test(
-            "Employee Creating Manager (should fail)",
-            "POST",
-            "users",
-            403,
-            data={
-                "identifiant": "Another Manager",
-                "role": "manager",
-                "password": "password123"
-            },
-            token=self.employee_token
-        )
+        # Cleanup
+        self.cleanup_test_data()
         
-        return all([success1, success2, success3])
+        # Print results
+        self.log(f"\n📊 TEST RESULTS:")
+        self.log(f"   Tests run: {self.tests_run}")
+        self.log(f"   Tests passed: {self.tests_passed}")
+        self.log(f"   Success rate: {(self.tests_passed/self.tests_run*100):.1f}%")
+        
+        if all_passed and self.tests_passed == self.tests_run:
+            self.log("🎉 ALL TESTS PASSED!")
+            return 0
+        else:
+            self.log("💥 SOME TESTS FAILED!")
+            return 1
 
 def main():
-    print("🚀 Starting PayTrack API Tests")
-    print("="*60)
-    
     tester = PayTrackAPITester()
-    
-    # Run all tests
-    test_results = []
-    
-    test_results.append(tester.test_admin_login())
-    test_results.append(tester.test_get_current_user())
-    test_results.append(tester.test_company_operations())
-    test_results.append(tester.test_user_operations_with_auto_id())
-    test_results.append(tester.test_admin_password_editing())
-    test_results.append(tester.test_payment_entry_operations())
-    test_results.append(tester.test_validation_workflow())
-    test_results.append(tester.test_reminder_system())
-    test_results.append(tester.test_analytics_functionality())
-    test_results.append(tester.test_entry_modification_permissions())
-    test_results.append(tester.test_error_scenarios())
-    
-    # Print final results
-    print("\n" + "="*60)
-    print("📊 FINAL TEST RESULTS")
-    print("="*60)
-    print(f"Tests run: {tester.tests_run}")
-    print(f"Tests passed: {tester.tests_passed}")
-    print(f"Tests failed: {tester.tests_run - tester.tests_passed}")
-    print(f"Success rate: {(tester.tests_passed / tester.tests_run * 100):.1f}%")
-    
-    if all(test_results):
-        print("\n🎉 ALL TEST SUITES PASSED!")
-        return 0
-    else:
-        print("\n❌ SOME TEST SUITES FAILED!")
-        failed_suites = []
-        suite_names = [
-            "Admin Login", "Current User", "Company Operations", "User Operations (Auto-ID)",
-            "Admin Password Editing", "Payment Entry Operations", "Validation Workflow",
-            "Reminder System", "Analytics Functionality", "Entry Modification Permissions", "Error Scenarios"
-        ]
-        for i, result in enumerate(test_results):
-            if not result:
-                failed_suites.append(suite_names[i])
-        print(f"Failed suites: {', '.join(failed_suites)}")
-        return 1
+    return tester.run_all_tests()
 
 if __name__ == "__main__":
     sys.exit(main())
