@@ -166,7 +166,7 @@ function LoginPage({ onLogin }) {
       <Card className="w-full max-w-md shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
         <CardHeader className="text-center pb-8">
           <div className="mx-auto mb-4">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold text-blue-600">
               PayTrack
             </h1>
           </div>
