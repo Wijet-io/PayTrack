@@ -1156,113 +1156,135 @@ function EditEntryDialog({ entry, companies, onSuccess }) {
   );
 }
 
-function ReminderDialog({ entryId, onSubmit, trigger }) {
+function RelanceDialog({ entryId, onSubmit, trigger }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
-  const [reminders, setReminders] = useState([]);
-  const [loadingReminders, setLoadingReminders] = useState(false);
+  const [relances, setRelances] = useState([]);
+  const [loadingRelances, setLoadingRelances] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
   useEffect(() => {
     if (open) {
-      fetchReminders();
+      fetchRelances();
     }
   }, [open, entryId]);
 
-  const fetchReminders = async () => {
-    setLoadingReminders(true);
+  const fetchRelances = async () => {
+    setLoadingRelances(true);
     try {
       const response = await axios.get(`${API}/reminders/${entryId}`);
-      setReminders(response.data);
+      setRelances(response.data);
     } catch (error) {
-      console.error('Failed to fetch reminders:', error);
+      console.error('Failed to fetch relances:', error);
     } finally {
-      setLoadingReminders(false);
+      setLoadingRelances(false);
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
+    setConfirmModal({
+      isOpen: true,
+      title: 'Enregistrer la relance',
+      message: note ? 'Êtes-vous sûr de vouloir enregistrer cette relance avec la note ?' : 'Êtes-vous sûr de vouloir enregistrer cette relance ?',
+      type: 'success'
+    });
+  };
+
+  const confirmRelance = async () => {
     setLoading(true);
+    setConfirmModal({ isOpen: false });
 
     try {
       await onSubmit(note);
       setNote('');
-      fetchReminders(); // Refresh reminders after adding new one
+      fetchRelances(); // Refresh relances after adding new one
     } catch (error) {
-      console.error('Failed to send reminder:', error);
+      console.error('Failed to send relance:', error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Rappels de suivi</DialogTitle>
-          <DialogDescription>
-            Historique des rappels et ajout d'un nouveau rappel
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          {/* Previous Reminders */}
-          <div>
-            <h4 className="font-medium text-slate-900 mb-2">Rappels précédents:</h4>
-            {loadingReminders ? (
-              <div className="text-sm text-slate-500">Chargement des rappels...</div>
-            ) : reminders.length > 0 ? (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {reminders.map((reminder) => (
-                  <div key={reminder.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="text-sm font-medium text-blue-900">
-                          {reminder.triggered_by_name}
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Relances de suivi</DialogTitle>
+            <DialogDescription>
+              Historique des relances et ajout d'une nouvelle relance
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Previous Relances */}
+            <div>
+              <h4 className="font-medium text-slate-900 mb-2">Relances précédentes:</h4>
+              {loadingRelances ? (
+                <div className="text-sm text-slate-500">Chargement des relances...</div>
+              ) : relances.length > 0 ? (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {relances.map((relance) => (
+                    <div key={relance.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="text-sm font-medium text-blue-900">
+                            {relance.triggered_by_name}
+                          </div>
+                          {relance.note && (
+                            <div className="text-sm text-blue-800 mt-1">{relance.note}</div>
+                          )}
                         </div>
-                        {reminder.note && (
-                          <div className="text-sm text-blue-800 mt-1">{reminder.note}</div>
-                        )}
-                      </div>
-                      <div className="text-xs text-blue-600">
-                        {new Date(reminder.triggered_at).toLocaleDateString('fr-FR')}
+                        <div className="text-xs text-blue-600">
+                          {new Date(relance.triggered_at).toLocaleDateString('fr-FR')}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-slate-500">Aucun rappel précédent</div>
-            )}
-          </div>
-
-          {/* New Reminder Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="note">Nouveau rappel (optionnel)</Label>
-              <Textarea
-                id="note"
-                placeholder="Ex: Client contacté, en attente de confirmation bancaire..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className="mt-2"
-                rows={3}
-              />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500">Aucune relance précédente</div>
+              )}
             </div>
-            <DialogFooter>
-              <Button type="submit" disabled={loading}>
-                <Bell className="h-4 w-4 mr-2" />
-                {loading ? 'Envoi...' : 'Envoyer le rappel'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+            {/* New Relance Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="note">Nouvelle relance (optionnel)</Label>
+                <Textarea
+                  id="note"
+                  placeholder="Ex: Client contacté, en attente de confirmation bancaire..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="mt-2"
+                  rows={3}
+                />
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={loading}>
+                  <Bell className="h-4 w-4 mr-2" />
+                  {loading ? 'Enregistrement...' : 'Enregistrer la relance'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false })}
+        onConfirm={confirmRelance}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
+    </>
   );
 }
 
