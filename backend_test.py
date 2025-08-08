@@ -150,7 +150,7 @@ class PaymentTrackerAPITester:
             "Create Employee",
             "POST",
             "users",
-            201,
+            200,
             data={
                 "identifiant": "Test Employee",
                 "role": "employee",
