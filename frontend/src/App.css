@@ -4,15 +4,26 @@
     'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
 }
 
-/* Hide "Made with Emergent" badge */
+/* Hide "Made with Emergent" badge and any watermarks */
 [alt*="Made with Emergent"],
 [text*="Made with Emergent"],
-*:contains("Made with Emergent") {
+*:contains("Made with Emergent"),
+div[style*="position: fixed"][style*="bottom"][style*="right"],
+.watermark,
+.emergent-badge,
+.emergent-watermark {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+/* Hide any fixed positioned elements in bottom right corner */
+body *[style*="position: fixed"] {
   display: none !important;
 }
 
-/* Hide any watermark or branding */
-div[style*="position: fixed"][style*="bottom"][style*="right"] {
+/* Specific targeting for Emergent badge */
+body > div:last-child {
   display: none !important;
 }
 
@@ -224,4 +235,13 @@ button:focus {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Ensure all fixed elements are hidden */
+* {
+  z-index: auto !important;
+}
+
+*[style*="position: fixed"][style*="bottom: 16px"][style*="right: 16px"] {
+  display: none !important;
 }

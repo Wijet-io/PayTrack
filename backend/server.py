@@ -50,6 +50,9 @@ class Company(BaseModel):
 class CompanyCreate(BaseModel):
     name: str
 
+class CompanyUpdate(BaseModel):
+    name: str
+
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str  # Auto-generated login ID
@@ -230,6 +233,23 @@ async def get_companies(current_user: User = Depends(get_current_user)):
     companies = await db.companies.find().to_list(1000)
     return [Company(**company) for company in companies]
 
+@api_router.put("/companies/{company_id}", response_model=Company)
+async def update_company(company_id: str, company_update: CompanyUpdate, current_user: User = Depends(get_current_user)):
+    if current_user.role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Seuls les admins et managers peuvent modifier les entreprises")
+    
+    company_doc = await db.companies.find_one({"id": company_id})
+    if not company_doc:
+        raise HTTPException(status_code=404, detail="Entreprise non trouvée")
+    
+    await db.companies.update_one(
+        {"id": company_id},
+        {"$set": {"name": company_update.name}}
+    )
+    
+    updated_company = await db.companies.find_one({"id": company_id})
+    return Company(**updated_company)
+
 # User routes
 @api_router.post("/users", response_model=UserResponse)
 async def create_user(user_create: UserCreate, current_user: User = Depends(get_current_user)):
@@ -310,7 +330,7 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: User 
         return UserResponse(
             id=updated_user["id"],
             user_id=updated_user["user_id"],
-            identifiant=updated_user["identifiant"],
+            identifiant=updated_user.get("identifiant", updated_user.get("name", updated_user["user_id"])),
             role=updated_user["role"],
             created_at=updated_user["created_at"]
         )
@@ -318,7 +338,7 @@ async def update_user(user_id: str, user_update: UserUpdate, current_user: User 
     return UserResponse(
         id=user_doc["id"],
         user_id=user_doc["user_id"],
-        identifiant=user_doc["identifiant"],
+        identifiant=user_doc.get("identifiant", user_doc.get("name", user_doc["user_id"])),
         role=user_doc["role"],
         created_at=user_doc["created_at"]
     )
@@ -475,9 +495,12 @@ async def get_reminders_for_entry(payment_entry_id: str, current_user: User = De
     
     result = []
     for reminder in reminders:
-        # Get triggered by user name
+        # Get triggered by user name with fallback handling
         user = await db.users.find_one({"id": reminder["triggered_by"]})
-        triggered_by_name = user["identifiant"] if user else None
+        if user:
+            triggered_by_name = user.get("identifiant", user.get("name", user.get("user_id", "Utilisateur inconnu")))
+        else:
+            triggered_by_name = "Utilisateur inconnu"
         
         result.append(ReminderResponse(
             id=reminder["id"],
@@ -490,6 +513,7 @@ async def get_reminders_for_entry(payment_entry_id: str, current_user: User = De
     
     return result
 
+# Analytics route
 @api_router.get("/analytics", response_model=AnalyticsData)
 async def get_analytics(current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":

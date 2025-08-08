@@ -19,7 +19,6 @@ import {
   Building, 
   DollarSign, 
   Bell, 
-  Settings, 
   Eye, 
   Trash2, 
   CheckCircle, 
@@ -28,7 +27,9 @@ import {
   TrendingUp,
   Calendar,
   UserCheck,
-  Building2
+  Building2,
+  X,
+  AlertTriangle
 } from 'lucide-react';
 import './App.css';
 
@@ -37,6 +38,44 @@ const API = `${BACKEND_URL}/api`;
 
 // Set up axios defaults
 axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+// Custom Confirmation Modal Component
+function ConfirmModal({ isOpen, onClose, onConfirm, title, message, type = 'danger' }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              type === 'danger' ? 'bg-red-100' : 'bg-blue-100'
+            }`}>
+              <AlertTriangle className={`h-6 w-6 ${
+                type === 'danger' ? 'text-red-600' : 'text-blue-600'
+              }`} />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+              <p className="text-sm text-gray-600 mt-1">{message}</p>
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={onClose}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={onConfirm}
+              className={type === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}
+            >
+              Confirmer
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const [user, setUser] = useState(null);
@@ -126,16 +165,17 @@ function LoginPage({ onLogin }) {
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
         <CardHeader className="text-center pb-8">
-          <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-            <div className="text-white font-bold text-xl">PT</div>
+          <div className="mx-auto mb-4">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              PayTrack
+            </h1>
           </div>
-          <CardTitle className="text-3xl font-bold text-slate-900">PayTrack</CardTitle>
           <CardDescription className="text-slate-600">Connectez-vous pour gérer les paiements</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="user_id">Code utilisateur</Label>
+              <Label htmlFor="user_id">Identifiant de connexion</Label>
               <Input
                 id="user_id"
                 type="text"
@@ -174,9 +214,7 @@ function LoginPage({ onLogin }) {
 }
 
 function Dashboard({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState(
-    user.role === 'admin' ? 'all-entries' : 'all-entries'
-  );
+  const [activeTab, setActiveTab] = useState('pending-entries');
 
   return (
     <div className="min-h-screen">
@@ -194,10 +232,10 @@ function Dashboard({ user, onLogout }) {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-6 w-full max-w-4xl mb-8">
-            <TabsTrigger value="all-entries" className="flex items-center gap-2">
+          <TabsList className="grid grid-cols-5 w-full max-w-3xl mb-8">
+            <TabsTrigger value="pending-entries" className="flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
-              Toutes les entrées
+              Entrées en attente
             </TabsTrigger>
             <TabsTrigger value="validated-entries" className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4" />
@@ -221,16 +259,10 @@ function Dashboard({ user, onLogout }) {
                 Utilisateurs
               </TabsTrigger>
             )}
-            {user.role === 'admin' && (
-              <TabsTrigger value="settings" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Paramètres
-              </TabsTrigger>
-            )}
           </TabsList>
 
-          <TabsContent value="all-entries">
-            <AllEntriesTab user={user} />
+          <TabsContent value="pending-entries">
+            <PendingEntriesTab user={user} />
           </TabsContent>
           
           <TabsContent value="validated-entries">
@@ -247,10 +279,6 @@ function Dashboard({ user, onLogout }) {
           
           <TabsContent value="users">
             <UsersTab user={user} />
-          </TabsContent>
-          
-          <TabsContent value="settings">
-            <SettingsTab user={user} />
           </TabsContent>
         </Tabs>
       </main>
@@ -272,10 +300,7 @@ function Header({ user, onLogout }) {
     <header className="bg-white border-b border-slate-200 shadow-sm">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-            <div className="text-white font-bold text-lg">PT</div>
-          </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             PayTrack
           </h1>
         </div>
@@ -294,10 +319,11 @@ function Header({ user, onLogout }) {
   );
 }
 
-function AllEntriesTab({ user }) {
+function PendingEntriesTab({ user }) {
   const [entries, setEntries] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, entryId: null });
 
   useEffect(() => {
     Promise.all([fetchEntries(), fetchCompanies()]).finally(() => setLoading(false));
@@ -306,7 +332,8 @@ function AllEntriesTab({ user }) {
   const fetchEntries = async () => {
     try {
       const response = await axios.get(`${API}/payment-entries`);
-      setEntries(response.data);
+      // Filter only pending entries
+      setEntries(response.data.filter(entry => !entry.is_validated));
     } catch (error) {
       console.error('Failed to fetch entries:', error);
     }
@@ -321,27 +348,43 @@ function AllEntriesTab({ user }) {
     }
   };
 
-  const handleDelete = async (entryId) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette entrée ?')) return;
-    
-    try {
-      await axios.delete(`${API}/payment-entries/${entryId}`);
-      fetchEntries();
-    } catch (error) {
-      console.error('Failed to delete entry:', error);
-      alert('Impossible de supprimer cette entrée. Elle pourrait déjà être validée.');
-    }
+  const handleDelete = (entryId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'delete',
+      entryId: entryId,
+      title: 'Supprimer l\'entrée',
+      message: 'Êtes-vous sûr de vouloir supprimer cette entrée de paiement ?'
+    });
   };
 
-  const handleValidate = async (entryId) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir valider cette entrée de paiement ?')) return;
+  const handleValidate = (entryId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'validate',
+      entryId: entryId,
+      title: 'Valider l\'entrée',
+      message: 'Êtes-vous sûr de vouloir valider cette entrée de paiement ?',
+      type: 'confirm'
+    });
+  };
+
+  const confirmAction = async () => {
+    const { action, entryId } = confirmModal;
     
     try {
-      await axios.post(`${API}/payment-entries/${entryId}/validate`);
+      if (action === 'delete') {
+        await axios.delete(`${API}/payment-entries/${entryId}`);
+      } else if (action === 'validate') {
+        await axios.post(`${API}/payment-entries/${entryId}/validate`);
+      }
       fetchEntries();
     } catch (error) {
-      console.error('Failed to validate entry:', error);
+      console.error('Failed to perform action:', error);
+      alert('Erreur lors de l\'opération');
     }
+    
+    setConfirmModal({ isOpen: false, action: null, entryId: null });
   };
 
   const handleReminder = async (entryId, note = '') => {
@@ -360,21 +403,11 @@ function AllEntriesTab({ user }) {
     return <div className="text-center py-8 text-slate-600">Chargement...</div>;
   }
 
-  const pendingEntries = entries.filter(e => !e.is_validated);
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-900">Toutes les entrées de paiement</h2>
-        <div className="flex gap-3">
-          <Badge variant="outline" className="text-lg px-3 py-1">
-            {entries.length} total
-          </Badge>
-          <Badge variant="outline" className="text-lg px-3 py-1 border-yellow-300 text-yellow-700">
-            {pendingEntries.length} en attente
-          </Badge>
-          <CreateEntryDialog companies={companies} onSuccess={fetchEntries} />
-        </div>
+        <h2 className="text-2xl font-bold text-slate-900">Entrées de paiement en attente</h2>
+        <CreateEntryDialog companies={companies} onSuccess={fetchEntries} />
       </div>
       
       <Card className="shadow-sm border-slate-200">
@@ -387,7 +420,6 @@ function AllEntriesTab({ user }) {
                 <TableHead>N° Facture</TableHead>
                 <TableHead>Montant</TableHead>
                 <TableHead>Créé par</TableHead>
-                <TableHead>Statut</TableHead>
                 <TableHead>Créé le</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -400,50 +432,40 @@ function AllEntriesTab({ user }) {
                   <TableCell>{entry.invoice_number}</TableCell>
                   <TableCell>{entry.amount.toLocaleString()} €</TableCell>
                   <TableCell>{entry.created_by_name}</TableCell>
-                  <TableCell>
-                    {entry.is_validated ? (
-                      <Badge className="bg-green-100 text-green-800">Validé</Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-yellow-300 text-yellow-700">En attente</Badge>
-                    )}
-                  </TableCell>
                   <TableCell className="text-slate-600">
                     {new Date(entry.created_at).toLocaleDateString('fr-FR')}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      {!entry.is_validated && (
+                      <EditEntryDialog entry={entry} companies={companies} onSuccess={fetchEntries} />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(entry.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      {(user.role === 'manager' || user.role === 'admin') && (
                         <>
-                          <EditEntryDialog entry={entry} companies={companies} onSuccess={fetchEntries} />
                           <Button
-                            variant="outline"
                             size="sm"
-                            onClick={() => handleDelete(entry.id)}
-                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleValidate(entry.id)}
+                            className="bg-green-600 hover:bg-green-700"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Valider
                           </Button>
-                          {(user.role === 'manager' || user.role === 'admin') && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleValidate(entry.id)}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Valider
+                          <ReminderDialog
+                            entryId={entry.id}
+                            onSubmit={(note) => handleReminder(entry.id, note)}
+                            trigger={
+                              <Button variant="outline" size="sm">
+                                <Bell className="h-4 w-4 mr-1" />
+                                Rappel
                               </Button>
-                              <ReminderDialog
-                                onSubmit={(note) => handleReminder(entry.id, note)}
-                                trigger={
-                                  <Button variant="outline" size="sm">
-                                    <Bell className="h-4 w-4 mr-1" />
-                                    Rappel
-                                  </Button>
-                                }
-                              />
-                            </>
-                          )}
+                            }
+                          />
                         </>
                       )}
                     </div>
@@ -452,8 +474,8 @@ function AllEntriesTab({ user }) {
               ))}
               {entries.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
-                    Aucune entrée de paiement trouvée. Créez votre première entrée pour commencer.
+                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                    Aucune entrée en attente. Toutes les entrées ont été validées.
                   </TableCell>
                 </TableRow>
               )}
@@ -461,6 +483,15 @@ function AllEntriesTab({ user }) {
           </Table>
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, action: null, entryId: null })}
+        onConfirm={confirmAction}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
     </div>
   );
 }
@@ -490,12 +521,7 @@ function ValidatedEntriesTab({ user }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-900">Entrées validées</h2>
-        <Badge className="text-lg px-3 py-1 bg-green-100 text-green-800">
-          {entries.length} validées
-        </Badge>
-      </div>
+      <h2 className="text-2xl font-bold text-slate-900">Entrées validées</h2>
       
       <Card className="shadow-sm border-slate-200">
         <CardContent className="p-0">
@@ -543,10 +569,14 @@ function ValidatedEntriesTab({ user }) {
 function AnalyticsTab({ user }) {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('overview');
+  const [timeFilter, setTimeFilter] = useState('all');
+  const [companyFilter, setCompanyFilter] = useState('all');
+  const [employeeFilter, setEmployeeFilter] = useState('all');
+  const [companies, setCompanies] = useState([]);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    fetchAnalytics();
+    Promise.all([fetchAnalytics(), fetchCompanies(), fetchUsers()]).finally(() => setLoading(false));
   }, []);
 
   const fetchAnalytics = async () => {
@@ -555,8 +585,24 @@ function AnalyticsTab({ user }) {
       setAnalytics(response.data);
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await axios.get(`${API}/companies`);
+      setCompanies(response.data);
+    } catch (error) {
+      console.error('Failed to fetch companies:', error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get(`${API}/users`);
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
     }
   };
 
@@ -568,100 +614,110 @@ function AnalyticsTab({ user }) {
     return <div className="text-center py-8 text-slate-500">Erreur lors du chargement des analyses</div>;
   }
 
+  // Filter data based on selected filters
+  const getFilteredData = () => {
+    let data = { ...analytics };
+    
+    if (companyFilter !== 'all') {
+      data.by_company = data.by_company.filter(item => item.name === companyFilter);
+    }
+    
+    if (employeeFilter !== 'all') {
+      data.by_employee = data.by_employee.filter(item => item.name === employeeFilter);
+    }
+    
+    return data;
+  };
+
+  const filteredData = getFilteredData();
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-900">Tableau de bord analytique</h2>
-        <Select value={viewMode} onValueChange={setViewMode}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="overview">Vue d'ensemble</SelectItem>
-            <SelectItem value="company">Par entreprise</SelectItem>
-            <SelectItem value="employee">Par employé</SelectItem>
-            <SelectItem value="time">Par mois</SelectItem>
-          </SelectContent>
-        </Select>
+        
+        <div className="flex gap-4">
+          <Select value={companyFilter} onValueChange={setCompanyFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrer par entreprise" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les entreprises</SelectItem>
+              {companies.map((company) => (
+                <SelectItem key={company.id} value={company.name}>{company.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrer par employé" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les employés</SelectItem>
+              {users.filter(u => u.role === 'employee').map((user) => (
+                <SelectItem key={user.id} value={user.identifiant}>{user.identifiant}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       
-      {viewMode === 'overview' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-slate-700 flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Total des entrées
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-slate-900">{analytics.total_entries}</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-green-700 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5" />
-                Validées
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">{analytics.validated_entries}</div>
-              <div className="text-sm text-slate-600 mt-1">
-                {analytics.total_entries > 0 ? Math.round((analytics.validated_entries / analytics.total_entries) * 100) : 0}% de validation
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-yellow-700 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                En attente
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-yellow-600">{analytics.pending_entries}</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-slate-700">Montant total</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-slate-900">
-                {analytics.total_amount.toLocaleString()} €
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-green-700">Montant validé</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">
-                {analytics.validated_amount.toLocaleString()} €
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-yellow-700">Montant en attente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-yellow-600">
-                {analytics.pending_amount.toLocaleString()} €
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="shadow-sm border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-slate-700 flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Total des entrées
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-900">{analytics.total_entries}</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-sm border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-green-700 flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              Validées
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600">{analytics.validated_entries}</div>
+            <div className="text-sm text-slate-600 mt-1">
+              {analytics.total_entries > 0 ? Math.round((analytics.validated_entries / analytics.total_entries) * 100) : 0}% de validation
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-sm border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-yellow-700 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              En attente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-yellow-600">{analytics.pending_entries}</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-sm border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-slate-700">Montant total</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-900">
+              {analytics.total_amount.toLocaleString()} €
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {viewMode === 'company' && (
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-sm border-slate-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -671,7 +727,7 @@ function AnalyticsTab({ user }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics.by_company.map((company, index) => (
+              {filteredData.by_company.map((company, index) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                   <div>
                     <div className="font-medium text-slate-900">{company.name}</div>
@@ -682,7 +738,7 @@ function AnalyticsTab({ user }) {
                   <div className="text-right">
                     <div className="font-medium text-slate-900">{company.amount.toLocaleString()} €</div>
                     <div className="text-sm text-slate-600">
-                      {Math.round((company.validated / company.count) * 100)}% validé
+                      {company.count > 0 ? Math.round((company.validated / company.count) * 100) : 0}% validé
                     </div>
                   </div>
                 </div>
@@ -690,9 +746,7 @@ function AnalyticsTab({ user }) {
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {viewMode === 'employee' && (
         <Card className="shadow-sm border-slate-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -702,7 +756,7 @@ function AnalyticsTab({ user }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {analytics.by_employee.map((employee, index) => (
+              {filteredData.by_employee.map((employee, index) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                   <div>
                     <div className="font-medium text-slate-900">{employee.name}</div>
@@ -713,7 +767,7 @@ function AnalyticsTab({ user }) {
                   <div className="text-right">
                     <div className="font-medium text-slate-900">{employee.amount.toLocaleString()} €</div>
                     <div className="text-sm text-slate-600">
-                      {Math.round((employee.validated / employee.count) * 100)}% validé
+                      {employee.count > 0 ? Math.round((employee.validated / employee.count) * 100) : 0}% validé
                     </div>
                   </div>
                 </div>
@@ -721,40 +775,42 @@ function AnalyticsTab({ user }) {
             </div>
           </CardContent>
         </Card>
-      )}
+      </div>
 
-      {viewMode === 'time' && (
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Analyse par mois
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {analytics.by_month
-                .sort((a, b) => b.name.localeCompare(a.name))
-                .map((month, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                  <div>
-                    <div className="font-medium text-slate-900">{month.name}</div>
-                    <div className="text-sm text-slate-600">
-                      {month.count} entrées • {month.validated} validées
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium text-slate-900">{month.amount.toLocaleString()} €</div>
-                    <div className="text-sm text-slate-600">
-                      {Math.round((month.validated / month.count) * 100)}% validé
-                    </div>
+      <Card className="shadow-sm border-slate-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Évolution dans le temps
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {analytics.by_month
+              .sort((a, b) => b.name.localeCompare(a.name))
+              .slice(0, 6)
+              .map((month, index) => (
+              <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div>
+                  <div className="font-medium text-slate-900">{month.name}</div>
+                  <div className="text-sm text-slate-600">
+                    {month.count} entrées • {month.validated} validées
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                <div className="text-right">
+                  <div className="font-medium text-slate-900">{month.amount.toLocaleString()} €</div>
+                  <div className="w-32 bg-gray-200 rounded-full h-2 mt-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full" 
+                      style={{ width: `${month.count > 0 ? (month.validated / month.count) * 100 : 0}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -796,6 +852,7 @@ function CompaniesTab({ user }) {
               <TableRow className="bg-slate-50">
                 <TableHead>Nom de l'entreprise</TableHead>
                 <TableHead>Créée le</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -805,11 +862,14 @@ function CompaniesTab({ user }) {
                   <TableCell className="text-slate-600">
                     {new Date(company.created_at).toLocaleDateString('fr-FR')}
                   </TableCell>
+                  <TableCell>
+                    <EditCompanyDialog company={company} onSuccess={fetchCompanies} />
+                  </TableCell>
                 </TableRow>
               ))}
               {companies.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={2} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={3} className="text-center py-8 text-slate-500">
                     Aucune entreprise trouvée.
                   </TableCell>
                 </TableRow>
@@ -866,8 +926,8 @@ function UsersTab({ user }) {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50">
-                <TableHead>Code utilisateur</TableHead>
                 <TableHead>Identifiant</TableHead>
+                <TableHead>Nom d'affichage</TableHead>
                 <TableHead>Rôle</TableHead>
                 <TableHead>Créé le</TableHead>
                 {user.role === 'admin' && <TableHead>Actions</TableHead>}
@@ -895,35 +955,6 @@ function UsersTab({ user }) {
               ))}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function SettingsTab({ user }) {
-  return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-slate-900">Paramètres système</h2>
-      
-      <Card className="shadow-sm border-slate-200">
-        <CardHeader>
-          <CardTitle>Informations système</CardTitle>
-          <CardDescription>Configuration et informations sur PayTrack</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="font-medium">Version</span>
-            <Badge variant="outline">1.0.0</Badge>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-medium">Environnement</span>
-            <Badge variant="outline">Production</Badge>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-medium">Base de données</span>
-            <Badge className="bg-green-100 text-green-800">Connectée</Badge>
-          </div>
         </CardContent>
       </Card>
     </div>
@@ -1125,10 +1156,30 @@ function EditEntryDialog({ entry, companies, onSuccess }) {
   );
 }
 
-function ReminderDialog({ onSubmit, trigger }) {
+function ReminderDialog({ entryId, onSubmit, trigger }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const [reminders, setReminders] = useState([]);
+  const [loadingReminders, setLoadingReminders] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      fetchReminders();
+    }
+  }, [open, entryId]);
+
+  const fetchReminders = async () => {
+    setLoadingReminders(true);
+    try {
+      const response = await axios.get(`${API}/reminders/${entryId}`);
+      setReminders(response.data);
+    } catch (error) {
+      console.error('Failed to fetch reminders:', error);
+    } finally {
+      setLoadingReminders(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1137,7 +1188,7 @@ function ReminderDialog({ onSubmit, trigger }) {
     try {
       await onSubmit(note);
       setNote('');
-      setOpen(false);
+      fetchReminders(); // Refresh reminders after adding new one
     } catch (error) {
       console.error('Failed to send reminder:', error);
     } finally {
@@ -1150,32 +1201,66 @@ function ReminderDialog({ onSubmit, trigger }) {
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Envoyer un rappel de suivi</DialogTitle>
+          <DialogTitle>Rappels de suivi</DialogTitle>
           <DialogDescription>
-            Ajouter une note optionnelle pour suivre ce rappel
+            Historique des rappels et ajout d'un nouveau rappel
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        
+        <div className="space-y-4">
+          {/* Previous Reminders */}
           <div>
-            <Label htmlFor="note">Note (optionnel)</Label>
-            <Textarea
-              id="note"
-              placeholder="Ex: Client contacté, en attente de confirmation bancaire..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="mt-2"
-              rows={3}
-            />
+            <h4 className="font-medium text-slate-900 mb-2">Rappels précédents:</h4>
+            {loadingReminders ? (
+              <div className="text-sm text-slate-500">Chargement des rappels...</div>
+            ) : reminders.length > 0 ? (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {reminders.map((reminder) => (
+                  <div key={reminder.id} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-sm font-medium text-blue-900">
+                          {reminder.triggered_by_name}
+                        </div>
+                        {reminder.note && (
+                          <div className="text-sm text-blue-800 mt-1">{reminder.note}</div>
+                        )}
+                      </div>
+                      <div className="text-xs text-blue-600">
+                        {new Date(reminder.triggered_at).toLocaleDateString('fr-FR')}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500">Aucun rappel précédent</div>
+            )}
           </div>
-          <DialogFooter>
-            <Button type="submit" disabled={loading}>
-              <Bell className="h-4 w-4 mr-2" />
-              {loading ? 'Envoi...' : 'Envoyer le rappel'}
-            </Button>
-          </DialogFooter>
-        </form>
+
+          {/* New Reminder Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="note">Nouveau rappel (optionnel)</Label>
+              <Textarea
+                id="note"
+                placeholder="Ex: Client contacté, en attente de confirmation bancaire..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="mt-2"
+                rows={3}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={loading}>
+                <Bell className="h-4 w-4 mr-2" />
+                {loading ? 'Envoi...' : 'Envoyer le rappel'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -1231,17 +1316,17 @@ function CreateUserDialog({ onSuccess, currentUserRole }) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Créer un nouvel utilisateur</DialogTitle>
-          <DialogDescription>Ajouter un nouvel utilisateur au système</DialogDescription>
+          <DialogDescription>Un identifiant de connexion sera généré automatiquement</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="identifiant">Identifiant</Label>
+            <Label htmlFor="identifiant">Nom d'affichage</Label>
             <Input
               id="identifiant"
               value={user.identifiant}
               onChange={(e) => setUser(prev => ({ ...prev, identifiant: e.target.value }))}
               className="mt-2"
-              placeholder="Nom d'affichage de l'utilisateur"
+              placeholder="Nom complet de l'utilisateur"
               required
             />
           </div>
@@ -1330,11 +1415,11 @@ function EditUserDialog({ user, onSuccess }) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Modifier l'utilisateur</DialogTitle>
-          <DialogDescription>Code: {user.user_id}</DialogDescription>
+          <DialogDescription>Identifiant: {user.user_id}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="identifiant">Identifiant</Label>
+            <Label htmlFor="identifiant">Nom d'affichage</Label>
             <Input
               id="identifiant"
               value={userData.identifiant}
@@ -1428,6 +1513,60 @@ function CreateCompanyDialog({ onSuccess }) {
           <DialogFooter>
             <Button type="submit" disabled={loading} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
               {loading ? 'Création...' : 'Créer l\'entreprise'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditCompanyDialog({ company, onSuccess }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(company.name);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await axios.put(`${API}/companies/${company.id}`, { name });
+      setOpen(false);
+      onSuccess();
+    } catch (error) {
+      console.error('Failed to update company:', error);
+      alert('Échec de la modification de l\'entreprise.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Edit className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Modifier l'entreprise</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Nom de l'entreprise</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-2"
+              required
+            />
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Modification...' : 'Modifier'}
             </Button>
           </DialogFooter>
         </form>
