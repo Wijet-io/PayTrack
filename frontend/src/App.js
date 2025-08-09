@@ -333,9 +333,53 @@ function Header({ user, onLogout }) {
 
 function PendingEntriesTab({ user }) {
   const [entries, setEntries] = useState([]);
+  const [filteredEntries, setFilteredEntries] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, entryId: null });
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  useEffect(() => {
+    Promise.all([fetchEntries(), fetchCompanies()]).finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [entries, searchTerm, selectedCompany, startDate, endDate]);
+
+  const applyFilters = () => {
+    let filtered = [...entries];
+
+    // Text search filter
+    if (searchTerm) {
+      filtered = filtered.filter(entry => 
+        entry.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.created_by_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Company filter
+    if (selectedCompany && selectedCompany !== 'all') {
+      filtered = filtered.filter(entry => entry.company_id === selectedCompany);
+    }
+
+    // Date range filter
+    if (startDate) {
+      filtered = filtered.filter(entry => new Date(entry.created_at) >= new Date(startDate));
+    }
+    if (endDate) {
+      filtered = filtered.filter(entry => new Date(entry.created_at) <= new Date(endDate + 'T23:59:59'));
+    }
+
+    setFilteredEntries(filtered);
+  };
 
   useEffect(() => {
     Promise.all([fetchEntries(), fetchCompanies()]).finally(() => setLoading(false));
