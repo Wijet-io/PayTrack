@@ -706,6 +706,84 @@ function ValidatedEntriesTab({ user }) {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-slate-900">Entrées validées</h2>
       
+      {/* Filter Section */}
+      <Card className="shadow-sm border-slate-200">
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <Label htmlFor="search">Recherche</Label>
+              <Input
+                id="search"
+                type="text"
+                placeholder="Entreprise, client, facture..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="company">Entreprise</Label>
+              <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Toutes les entreprises" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes les entreprises</SelectItem>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="startDate">Date validation début</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="endDate">Date validation fin</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          
+          {(searchTerm || selectedCompany !== 'all' || startDate || endDate) && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-slate-600">
+                {filteredEntries.length} entrée(s) trouvée(s) sur {entries.length}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCompany('all');
+                  setStartDate('');
+                  setEndDate('');
+                }}
+              >
+                Réinitialiser les filtres
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
       <Card className="shadow-sm border-slate-200">
         <CardContent className="p-0">
           <Table>
@@ -721,7 +799,7 @@ function ValidatedEntriesTab({ user }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {entries.map((entry) => (
+              {filteredEntries.map((entry) => (
                 <TableRow key={entry.id} className="hover:bg-slate-50">
                   <TableCell className="font-medium">{entry.company_name}</TableCell>
                   <TableCell>{entry.client_name}</TableCell>
