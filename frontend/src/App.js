@@ -942,27 +942,124 @@ function AnalyticsTab({ user }) {
     return <div className="text-center py-8 text-slate-500">Erreur lors du chargement des analyses</div>;
   }
 
-  // Filter data based on selected filters
-  const getFilteredData = () => {
-    let data = { ...analytics };
-    
-    if (companyFilter !== 'all') {
-      data.by_company = data.by_company.filter(item => item.name === companyFilter);
-    }
-    
-    if (employeeFilter !== 'all') {
-      data.by_employee = data.by_employee.filter(item => item.name === employeeFilter);
-    }
-    
-    return data;
-  };
-
-  const filteredData = getFilteredData();
+  const displayData = filteredData || analytics;
+  const selectedCompanyName = selectedCompanyId === 'all' ? null : companies.find(c => c.id === selectedCompanyId)?.name;
+  const selectedEmployeeName = selectedEmployeeId === 'all' ? null : users.find(u => u.id === selectedEmployeeId)?.identifiant;
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-900">Tableau de bord analytique</h2>
+      {/* Header with Clear Context */}
+      <div className="text-center">
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">📊 Analytics Dashboard</h2>
+        <div className="text-lg text-slate-600">
+          {selectedCompanyName && selectedEmployeeName ? (
+            <span className="font-semibold text-blue-600">
+              🏢 {selectedCompanyName} → 👤 {selectedEmployeeName}
+            </span>
+          ) : selectedCompanyName ? (
+            <span className="font-semibold text-green-600">
+              🏢 {selectedCompanyName} (toutes les données de cette entreprise)
+            </span>
+          ) : selectedEmployeeName ? (
+            <span className="font-semibold text-purple-600">
+              👤 {selectedEmployeeName} (toutes les données de cet employé)
+            </span>
+          ) : (
+            <span className="text-slate-500">Vue d'ensemble complète</span>
+          )}
+        </div>
+      </div>
+
+      {/* Filter Controls */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label className="text-base font-semibold text-slate-700">🏢 Filtrer par entreprise</Label>
+              <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                <SelectTrigger className="mt-2 h-12 text-base">
+                  <SelectValue placeholder="Sélectionner une entreprise" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">📊 Toutes les entreprises</SelectItem>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      🏢 {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label className="text-base font-semibold text-slate-700">👤 Filtrer par employé</Label>
+              <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+                <SelectTrigger className="mt-2 h-12 text-base">
+                  <SelectValue placeholder="Sélectionner un employé" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">👥 Tous les employés</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      👤 {user.identifiant} ({user.role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {(selectedCompanyId !== 'all' || selectedEmployeeId !== 'all') && (
+            <div className="mt-4 text-center">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedCompanyId('all');
+                  setSelectedEmployeeId('all');
+                }}
+                className="bg-white hover:bg-slate-50"
+              >
+                🔄 Réinitialiser les filtres
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Key Metrics - Big and Clear */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+          <CardContent className="p-6 text-center">
+            <div className="text-4xl font-bold mb-2">📝</div>
+            <div className="text-3xl font-bold">{displayData.total_entries || 0}</div>
+            <div className="text-blue-100 text-lg">Entrées totales</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
+          <CardContent className="p-6 text-center">
+            <div className="text-4xl font-bold mb-2">✅</div>
+            <div className="text-3xl font-bold">{displayData.validated_entries || 0}</div>
+            <div className="text-green-100 text-lg">Validées</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+          <CardContent className="p-6 text-center">
+            <div className="text-4xl font-bold mb-2">⏳</div>
+            <div className="text-3xl font-bold">{displayData.pending_entries || 0}</div>
+            <div className="text-orange-100 text-lg">En attente</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+          <CardContent className="p-6 text-center">
+            <div className="text-4xl font-bold mb-2">💰</div>
+            <div className="text-2xl font-bold">{(displayData.total_amount || 0).toLocaleString()} €</div>
+            <div className="text-purple-100 text-lg">Montant total</div>
+          </CardContent>
+        </Card>
+      </div>
         
         <div className="flex gap-4">
           <Select value={companyFilter} onValueChange={setCompanyFilter}>
