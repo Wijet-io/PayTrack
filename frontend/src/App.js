@@ -83,10 +83,13 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔍 APP DEBUG: useEffect triggered, token:', token);
     if (token) {
+      console.log('🔍 APP DEBUG: Token found, setting axios header and fetching user');
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       fetchCurrentUser();
     } else {
+      console.log('🔍 APP DEBUG: No token found, setting loading to false');
       setLoading(false);
     }
   }, [token]);
