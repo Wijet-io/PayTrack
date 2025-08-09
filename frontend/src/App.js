@@ -95,13 +95,16 @@ function App() {
   }, [token]);
 
   const fetchCurrentUser = async () => {
+    console.log('🔍 APP DEBUG: fetchCurrentUser called');
     try {
       const response = await axios.get(`${API}/me`);
+      console.log('🔍 APP DEBUG: User fetch successful:', response.data);
       setUser(response.data);
     } catch (error) {
-      console.error('Failed to fetch user:', error);
+      console.error('🔍 APP DEBUG: Failed to fetch user:', error);
       handleLogout();
     } finally {
+      console.log('🔍 APP DEBUG: fetchCurrentUser finally block, setting loading false');
       setLoading(false);
     }
   };
