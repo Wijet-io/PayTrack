@@ -829,12 +829,79 @@ function ValidatedEntriesTab({ user }) {
 
 function AnalyticsTab({ user }) {
   const [analytics, setAnalytics] = useState(null);
+  const [filteredData, setFilteredData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState('all');
-  const [companyFilter, setCompanyFilter] = useState('all');
-  const [employeeFilter, setEmployeeFilter] = useState('all');
+  const [selectedFilter, setSelectedFilter] = useState('overview');
+  const [selectedCompanyId, setSelectedCompanyId] = useState('all');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
   const [companies, setCompanies] = useState([]);
   const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    Promise.all([fetchAnalytics(), fetchCompanies(), fetchUsers()]).finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (analytics) {
+      filterAnalyticsData();
+    }
+  }, [analytics, selectedFilter, selectedCompanyId, selectedEmployeeId]);
+
+  const filterAnalyticsData = () => {
+    if (!analytics) return;
+
+    let filtered = { ...analytics };
+
+    // Filter by company
+    if (selectedCompanyId !== 'all') {
+      const selectedCompany = companies.find(c => c.id === selectedCompanyId);
+      if (selectedCompany) {
+        // Filter all data to show only selected company
+        filtered.by_company = filtered.by_company.filter(item => item.company === selectedCompany.name);
+        filtered.by_employee = filtered.by_employee.filter(item => 
+          // Only show employees who created entries for this company
+          analytics.by_company.some(companyData => 
+            companyData.company === selectedCompany.name && 
+            companyData.entries && 
+            companyData.entries.some(entry => entry.created_by_name === item.employee)
+          )
+        );
+        
+        // Recalculate totals for filtered data
+        const companyData = filtered.by_company[0];
+        if (companyData) {
+          filtered.total_entries = companyData.total_entries;
+          filtered.validated_entries = companyData.validated_entries;
+          filtered.pending_entries = companyData.pending_entries;
+          filtered.total_amount = companyData.total_amount;
+        }
+      }
+    }
+
+    // Filter by employee  
+    if (selectedEmployeeId !== 'all') {
+      const selectedUser = users.find(u => u.id === selectedEmployeeId);
+      if (selectedUser) {
+        // Filter to show only selected employee's data
+        filtered.by_employee = filtered.by_employee.filter(item => item.employee === selectedUser.identifiant);
+        filtered.by_company = filtered.by_company.filter(item =>
+          // Only show companies where this employee has entries
+          item.entries && item.entries.some(entry => entry.created_by_name === selectedUser.identifiant)
+        );
+        
+        // Recalculate totals for filtered data
+        const employeeData = filtered.by_employee[0];
+        if (employeeData) {
+          filtered.total_entries = employeeData.total_entries;
+          filtered.validated_entries = employeeData.validated_entries;
+          filtered.pending_entries = employeeData.pending_entries;
+          filtered.total_amount = employeeData.total_amount;
+        }
+      }
+    }
+
+    setFilteredData(filtered);
+  };
 
   useEffect(() => {
     Promise.all([fetchAnalytics(), fetchCompanies(), fetchUsers()]).finally(() => setLoading(false));
