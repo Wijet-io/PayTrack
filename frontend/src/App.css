@@ -17,21 +17,10 @@ div[style*="position: fixed"][style*="bottom"][style*="right"],
   opacity: 0 !important;
 }
 
-/* Hide any fixed positioned elements */
-*[style*="position: fixed"] {
-  display: none !important;
-}
-
-/* Target specific elements that might contain the badge */
-div[style*="bottom: 16px"],
-div[style*="right: 16px"],
+/* Target specific badge elements only */
+div[style*="bottom: 16px"][style*="right: 16px"],
 *[style*="z-index: 999999"],
 *[style*="z-index: 9999"] {
-  display: none !important;
-}
-
-/* Hide last child div that might be the badge container */
-body > div:last-of-type {
   display: none !important;
 }
 
