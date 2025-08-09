@@ -162,15 +162,15 @@ function LoginPage({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader className="text-center pb-8">
-          <div className="mx-auto mb-4">
-            <h1 className="text-4xl font-bold text-blue-600">
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <Card style={{ width: '100%', maxWidth: '28rem', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: 'none', backgroundColor: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(8px)' }}>
+        <CardHeader style={{ textAlign: 'center', paddingBottom: '32px' }}>
+          <div style={{ margin: '0 auto 16px' }}>
+            <h1 style={{ fontSize: '36px', fontWeight: 'bold', color: '#2563eb' }}>
               PayTrack
             </h1>
           </div>
-          <CardDescription className="text-slate-600">Connectez-vous pour gérer les paiements</CardDescription>
+          <CardDescription style={{ color: '#64748b' }}>Connectez-vous pour gérer les paiements</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
