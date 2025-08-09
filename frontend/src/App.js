@@ -119,8 +119,14 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="text-slate-600 text-lg font-medium">Chargement...</div>
+      <div style={{ 
+        minHeight: '100vh',
+        background: 'linear-gradient(to bottom right, #f8fafc, #e2e8f0)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ color: '#475569', fontSize: '18px', fontWeight: '500' }}>Chargement...</div>
       </div>
     );
   }
