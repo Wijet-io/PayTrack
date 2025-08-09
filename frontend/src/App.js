@@ -632,11 +632,53 @@ function PendingEntriesTab({ user }) {
 
 function ValidatedEntriesTab({ user }) {
   const [entries, setEntries] = useState([]);
+  const [filteredEntries, setFilteredEntries] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
-    fetchValidatedEntries();
+    Promise.all([fetchValidatedEntries(), fetchCompanies()]).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [entries, searchTerm, selectedCompany, startDate, endDate]);
+
+  const applyFilters = () => {
+    let filtered = [...entries];
+
+    // Text search filter
+    if (searchTerm) {
+      filtered = filtered.filter(entry => 
+        entry.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.created_by_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (entry.validated_by && entry.validated_by.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // Company filter
+    if (selectedCompany && selectedCompany !== 'all') {
+      filtered = filtered.filter(entry => entry.company_id === selectedCompany);
+    }
+
+    // Date range filter (validation date)
+    if (startDate) {
+      filtered = filtered.filter(entry => new Date(entry.validated_at) >= new Date(startDate));
+    }
+    if (endDate) {
+      filtered = filtered.filter(entry => new Date(entry.validated_at) <= new Date(endDate + 'T23:59:59'));
+    }
+
+    setFilteredEntries(filtered);
+  };
 
   const fetchValidatedEntries = async () => {
     try {
@@ -644,8 +686,15 @@ function ValidatedEntriesTab({ user }) {
       setEntries(response.data);
     } catch (error) {
       console.error('Failed to fetch validated entries:', error);
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await axios.get(`${API}/companies`);
+      setCompanies(response.data);
+    } catch (error) {
+      console.error('Failed to fetch companies:', error);
     }
   };
 
